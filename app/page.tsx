@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { getSupabaseClient } from "@/src/lib/supabase-client";
+import { LandingPage } from "@/app/components/LandingPage";
+import { AuthModal } from "@/app/components/AuthModal";
 
 type Message = {
   id: number;
@@ -10,6 +13,11 @@ type Message = {
 };
 
 export default function Home() {
+  const [user, setUser] = useState<any>(null);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -25,18 +33,78 @@ export default function Home() {
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Check active Supabase auth session
+  useEffect(() => {
+    try {
+      const supabase = getSupabaseClient();
+      supabase.auth.getUser().then(({ data }: { data: any }) => {
+        const u = data?.user ?? null;
+        setUser(u);
+        setAuthChecking(false);
+        if (u?.id) {
+          try {
+            const savedDoc = localStorage.getItem(`docuchat_doc_${u.id}`);
+            const savedDocId = localStorage.getItem(`docuchat_doc_id_${u.id}`);
+            const savedMsgs = localStorage.getItem(`docuchat_msgs_${u.id}`);
+            if (savedDoc) setCurrentDocument(savedDoc);
+            if (savedDocId) setCurrentDocumentId(savedDocId);
+            if (savedMsgs) {
+              const parsed = JSON.parse(savedMsgs);
+              if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
+            }
+          } catch {}
+        }
+      });
+
+      const { data: listener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+        const u = session?.user ?? null;
+        setUser(u);
+        if (!u) {
+          setCurrentDocument(null);
+          setCurrentDocumentId(null);
+        }
+      });
+
+      return () => {
+        listener?.subscription?.unsubscribe();
+      };
+    } catch {
+      setAuthChecking(false);
+    }
+  }, []);
+
+  // Save conversation and active document to localStorage
+  useEffect(() => {
+    if (!user?.id || authChecking) return;
+    try {
+      localStorage.setItem(`docuchat_msgs_${user.id}`, JSON.stringify(messages));
+      if (currentDocument) {
+        localStorage.setItem(`docuchat_doc_${user.id}`, currentDocument);
+      }
+      if (currentDocumentId) {
+        localStorage.setItem(`docuchat_doc_id_${user.id}`, currentDocumentId);
+      }
+    } catch {}
+  }, [messages, currentDocument, currentDocumentId, user?.id, authChecking]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
+    if (user) {
+      scrollToBottom();
+    }
+  }, [messages, loading, user]);
 
-  const handleSend = async (e?: React.FormEvent, customText?: string) => {
+  const handleSend = async (e?: React.SyntheticEvent, customText?: string) => {
     if (e) e.preventDefault();
     const textToSend = (customText || message).trim();
     if (!textToSend || loading) return;
@@ -76,6 +144,7 @@ export default function Home() {
           message: textToSend,
           document: currentDocument,
           documentId: currentDocumentId,
+          userId: user?.id,
         }),
       });
 
@@ -158,6 +227,9 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (user?.id) {
+        formData.append("userId", user.id);
+      }
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -209,17 +281,37 @@ export default function Home() {
   };
 
   const handleClearChat = () => {
-    if (window.confirm("Are you sure you want to clear this conversation?")) {
-      setMessages([
-        {
-          id: Date.now(),
-          text: currentDocument
-            ? `Chat cleared. Ready for your questions about **"${currentDocument}"**.`
-            : "Chat cleared. Please upload a document to get started.",
-          sender: "ai",
-          timestamp: "Just now",
-        },
-      ]);
+    setMessages([
+      {
+        id: Date.now(),
+        text: currentDocument
+          ? `Chat cleared. Ready for your questions about **"${currentDocument}"**.`
+          : "Chat cleared. Please upload a document to get started.",
+        sender: "ai",
+        timestamp: "Just now",
+      },
+    ]);
+    setShowClearConfirm(false);
+  };
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      if (user?.id) {
+        try {
+          localStorage.removeItem(`docuchat_msgs_${user.id}`);
+          localStorage.removeItem(`docuchat_doc_${user.id}`);
+          localStorage.removeItem(`docuchat_doc_id_${user.id}`);
+        } catch {}
+      }
+      const supabase = getSupabaseClient();
+      await supabase.auth.signOut();
+      setUser(null);
+      setCurrentDocument(null);
+      setCurrentDocumentId(null);
+      setShowSignOutConfirm(false);
+    } finally {
+      setSigningOut(false);
     }
   };
 
@@ -229,6 +321,46 @@ export default function Home() {
     "Extract important action items or dates",
   ];
 
+  // Loading state while verifying auth
+  if (authChecking) {
+    return (
+      <div className="h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span>Loading DocuChat AI...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is not logged in, render the Landing Page
+  if (!user) {
+    return (
+      <>
+        <LandingPage
+          onGetStarted={() => {
+            setAuthMode("register");
+            setShowAuthModal(true);
+          }}
+          onLoginClick={() => {
+            setAuthMode("login");
+            setShowAuthModal(true);
+          }}
+        />
+        <AuthModal
+          isOpen={showAuthModal}
+          initialMode={authMode}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(loggedInUser) => {
+            setUser(loggedInUser);
+            setShowAuthModal(false);
+          }}
+        />
+      </>
+    );
+  }
+
+  // Main App Chat Interface for Logged-In User
   return (
     <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       {/* Hidden file input */}
@@ -264,7 +396,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="font-bold text-lg text-white tracking-tight">DocuChat AI</h1>
-              <p className="text-xs text-blue-400 font-medium">Smart Document RAG</p>
+              <p className="text-xs text-blue-400 font-medium truncate max-w-[140px]">{user.email}</p>
             </div>
           </div>
           <button
@@ -352,7 +484,7 @@ export default function Home() {
         {/* Sidebar Footer */}
         <div className="p-4 border-t border-slate-800/80 space-y-2">
           <button
-            onClick={handleClearChat}
+            onClick={() => setShowClearConfirm(true)}
             className="w-full py-2 px-3 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -360,10 +492,16 @@ export default function Home() {
             </svg>
             Clear Conversation
           </button>
-          <div className="flex items-center justify-between text-[11px] text-slate-400 px-1 pt-1">
-            <span>Powered by Gemini</span>
-            <span className="text-slate-400 font-mono">v1.0</span>
-          </div>
+
+          <button
+            onClick={() => setShowSignOutConfirm(true)}
+            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign Out
+          </button>
         </div>
       </aside>
 
@@ -394,7 +532,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
               <span className={`w-2 h-2 rounded-full ${currentDocument ? "bg-emerald-400" : "bg-amber-400"}`} />
               <span>{currentDocument ? "Document Loaded" : "Upload Required"}</span>
@@ -493,7 +631,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* Quick Suggestion Chips (when document is uploaded) */}
+        {/* Quick Suggestion Chips */}
         {currentDocument && messages.length <= 3 && !loading && (
           <div className="px-4 sm:px-6 max-w-3xl mx-auto w-full pb-2">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -559,6 +697,85 @@ export default function Home() {
           </form>
         </div>
       </main>
+
+      {/* Clear Chat Confirmation Dialog */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-white">Clear entire conversation?</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                This will reset your current chat messages. Your uploaded document will remain loaded.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="py-2.5 px-4 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearChat}
+                className="py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white shadow-lg shadow-amber-600/25 transition-all cursor-pointer flex items-center justify-center"
+              >
+                Clear Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sign Out Confirmation Dialog */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-white">Sign out of DocuChat AI?</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                You will need to sign back in to access your uploaded documents and chats.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={signingOut}
+                onClick={() => setShowSignOutConfirm(false)}
+                className="py-2.5 px-4 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={signingOut}
+                onClick={handleSignOut}
+                className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-semibold text-white shadow-lg shadow-red-600/25 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {signingOut ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Signing out...</span>
+                  </>
+                ) : (
+                  "Sign Out"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

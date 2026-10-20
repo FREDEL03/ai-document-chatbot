@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, document: documentName, documentId } = body;
+    const { message, document: documentName, documentId, userId } = body;
     if (typeof message !== "string") {
       return NextResponse.json(
         { error: "Field 'message' must be a string" },
@@ -102,10 +102,14 @@ export async function POST(request: NextRequest) {
         let targetId = documentId;
 
         if (!targetId && documentName) {
-          const { data: doc } = await supabaseAdmin
+          let query = supabaseAdmin
             .from("documents")
             .select("id")
-            .eq("original_name", documentName)
+            .eq("original_name", documentName);
+          if (userId) {
+            query = query.eq("user_id", userId);
+          }
+          const { data: doc } = await query
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle();
@@ -155,9 +159,10 @@ export async function POST(request: NextRequest) {
         const result = await ai.models.generateContent({
           model,
           contents: prompt,
-          config: { maxOutputTokens: 1000 },
         });
-        answer = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+        const partText = result.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("\n") || "";
+        answer = partText.trim() || result.text?.trim() || "";
         if (answer) break;
       } catch (err: any) {
         lastError = err;
@@ -166,9 +171,9 @@ export async function POST(request: NextRequest) {
     }
 
     if (!answer) {
-      console.error("Gemini returned empty answer");
+      console.error("Gemini returned empty answer. Last error:", lastError);
       return NextResponse.json(
-        { error: "AI service returned empty response" },
+        { error: lastError?.message || "AI service returned empty response" },
         { status: 502 }
       );
     }

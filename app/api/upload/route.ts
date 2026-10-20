@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdmin();
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const userId = (formData.get("userId") as string | null)?.trim() || null;
 
     if (!file) {
       return NextResponse.json(
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
     const { data: docData, error: docError } = await supabaseAdmin
       .from("documents")
       .insert({
+        user_id: userId,
         filename: filename,
         original_name: file.name,
         file_size: file.size,
