@@ -96,8 +96,8 @@ export default function Home() {
       alert("Please upload PDF, TXT, or DOC/DOCX files only.");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) { // 10 MB
-      alert("File size must be less than 10 MB.");
+    if (file.size > 4.5 * 1024 * 1024) { // Vercel serverless limit
+      alert("File size must be under 4.5 MB on Vercel.");
       return;
     }
 
@@ -111,7 +111,15 @@ export default function Home() {
         body: formData,
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        throw new Error(
+          `Server error (${response.status}): ${raw.slice(0, 120) || "Empty response from server"}`
+        );
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Upload failed");

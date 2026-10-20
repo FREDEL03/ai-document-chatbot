@@ -3,14 +3,17 @@ import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { chunkText } from "@/src/lib/chunk-text";
 import { PDFParse } from "pdf-parse";
 
-// Define allowed file types and max size (10 MB)
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
+// Define allowed file types and max size (4.5 MB for Vercel)
 const ALLOWED_TYPES = [
   "application/pdf",
   "text/plain",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
-const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB limit for Vercel Serverless
 
 export async function POST(request: NextRequest) {
   try {
