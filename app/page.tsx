@@ -337,12 +337,11 @@ export default function Home() {
       }
       const { data } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (data?.storage_path) {
-        const { data: urlData } = await supabase.storage.from("documents").createSignedUrl(data.storage_path, 3600);
-        if (urlData?.signedUrl) {
+        const { data: urlData, error: urlError } = await supabase.storage.from("documents").createSignedUrl(data.storage_path, 3600);
+        if (!urlError && urlData?.signedUrl) {
           setDocUrl(urlData.signedUrl);
         } else {
-          const { data: publicData } = supabase.storage.from("documents").getPublicUrl(data.storage_path);
-          setDocUrl(publicData?.publicUrl || null);
+          setDocUrl(null);
         }
       }
       setDocText(data?.extracted_text || null);
@@ -887,8 +886,13 @@ export default function Home() {
                   <img src={docUrl} alt="Document" className="max-w-full max-h-full rounded-lg object-contain" />
                 </div>
               ) : (
-                <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
-                  {docText || "No preview available for this document format."}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="p-3 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-300 flex items-center justify-between">
+                    <span>💡 Storage bucket &apos;documents&apos; not found in Supabase. Showing extracted text representation:</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
+                    {docText || "No text available for this document."}
+                  </div>
                 </div>
               )}
             </div>
