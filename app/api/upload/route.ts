@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { chunkText } from "@/src/lib/chunk-text";
-import { PDFParse } from "pdf-parse";
 
 export const maxDuration = 30;
 
@@ -101,8 +100,32 @@ export async function POST(request: NextRequest) {
 
     // Extract text based on file type
     if (file.type === "application/pdf") {
-      // PDF text extraction
+      // PDF text extraction (polyfill DOM globals for Node/Vercel serverless)
       try {
+        if (typeof (globalThis as any).DOMMatrix === "undefined") {
+          (globalThis as any).DOMMatrix = class DOMMatrix {
+            constructor(_init?: any) {}
+            multiply() { return this; }
+            multiplySelf() { return this; }
+            preMultiplySelf() { return this; }
+            translate() { return this; }
+            scale() { return this; }
+            invertSelf() { return this; }
+          };
+        }
+        if (typeof (globalThis as any).Path2D === "undefined") {
+          (globalThis as any).Path2D = class Path2D {
+            constructor(_init?: any) {}
+            addPath() {}
+          };
+        }
+        if (typeof (globalThis as any).ImageData === "undefined") {
+          (globalThis as any).ImageData = class ImageData {
+            constructor(_init?: any) {}
+          };
+        }
+
+        const { PDFParse } = await import("pdf-parse");
         const parser = new PDFParse({ data: new Uint8Array(buffer) });
         const result = await parser.getText();
         extractedText = result.text.replace(/\s+/g, " ").trim();
