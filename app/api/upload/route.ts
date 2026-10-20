@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Preload worker into memory to bypass Vercel filesystem missing module error
+        // @ts-ignore
         const pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
         (globalThis as any).pdfjsWorker = pdfjsWorker;
 
