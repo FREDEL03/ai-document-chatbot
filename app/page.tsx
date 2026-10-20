@@ -39,6 +39,7 @@ export default function Home() {
 
   const [showDocModal, setShowDocModal] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
+  const [docUrl, setDocUrl] = useState<string | null>(null);
   const [docText, setDocText] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -323,10 +324,11 @@ export default function Home() {
     if (!currentDocument && !currentDocumentId) return;
     setShowDocModal(true);
     setDocLoading(true);
+    setDocUrl(null);
     setDocText(null);
     try {
       const supabase = getSupabaseClient();
-      let query = supabase.from("documents").select("extracted_text, id");
+      let query = supabase.from("documents").select("storage_path, extracted_text, id");
       if (currentDocumentId) {
         query = query.eq("id", currentDocumentId);
       } else if (currentDocument) {
@@ -334,11 +336,16 @@ export default function Home() {
         if (user?.id) query = query.eq("user_id", user.id);
       }
       const { data } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (data?.extracted_text) {
-        setDocText(data.extracted_text);
-      } else {
-        setDocText("No text preview available for this document.");
+      if (data?.storage_path) {
+        const { data: urlData } = await supabase.storage.from("documents").createSignedUrl(data.storage_path, 3600);
+        if (urlData?.signedUrl) {
+          setDocUrl(urlData.signedUrl);
+        } else {
+          const { data: publicData } = supabase.storage.from("documents").getPublicUrl(data.storage_path);
+          setDocUrl(publicData?.publicUrl || null);
+        }
       }
+      setDocText(data?.extracted_text || null);
     } catch {
       setDocText("Failed to load document content.");
     } finally {
@@ -826,49 +833,74 @@ export default function Home() {
 
       {/* View Uploaded Document Modal */}
       {showDocModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="w-full max-w-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="w-full max-w-4xl h-[90vh] bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
                   📄
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-base font-semibold text-white truncate" title={currentDocument || "Document"}>
+                  <h3 className="text-sm sm:text-base font-semibold text-white truncate" title={currentDocument || "Document"}>
                     {currentDocument || "Uploaded Document"}
                   </h3>
-                  <p className="text-xs text-slate-400">Extracted document content used by AI</p>
+                  <p className="text-[11px] text-slate-400">Full visual document viewer</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowDocModal(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-              >
-                ✕
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {docUrl && (
+                  <a
+                    href={docUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors"
+                  >
+                    <span>Open in new tab</span>
+                    <span>↗</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => setShowDocModal(false)}
+                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {/* Document Content */}
-            <div className="flex-1 overflow-y-auto my-4 pr-1 text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 sm:p-5 select-text">
+            {/* Document Full View Area */}
+            <div className="flex-1 my-3 overflow-hidden rounded-2xl bg-slate-950 border border-slate-800 flex flex-col">
               {docLoading ? (
-                <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
-                  <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                   <span className="font-sans text-xs">Loading document preview...</span>
                 </div>
+              ) : docUrl && currentDocument?.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={`${docUrl}#toolbar=1`}
+                  className="w-full h-full rounded-2xl border-0"
+                  title="PDF Preview"
+                />
+              ) : docUrl && (currentDocument?.toLowerCase().endsWith(".png") || currentDocument?.toLowerCase().endsWith(".jpg")) ? (
+                <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+                  <img src={docUrl} alt="Document" className="max-w-full max-h-full rounded-lg object-contain" />
+                </div>
               ) : (
-                docText
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
+                  {docText || "No preview available for this document format."}
+                </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs text-slate-400 shrink-0">
-              <span>{docText ? `${docText.length.toLocaleString()} characters` : "0 characters"}</span>
+            <div className="flex items-center justify-between pt-2 text-xs text-slate-400 shrink-0">
+              <span className="truncate max-w-[250px]">{currentDocument}</span>
               <button
                 onClick={() => setShowDocModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors cursor-pointer"
               >
-                Close Preview
+                Done
               </button>
             </div>
           </div>
