@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { chunkText } from "@/src/lib/chunk-text";
 import { PDFParse } from "pdf-parse";
 
-export const runtime = "nodejs";
 export const maxDuration = 30;
 
 // Define allowed file types and max size (4.5 MB for Vercel)
