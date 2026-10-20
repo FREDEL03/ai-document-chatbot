@@ -11,7 +11,11 @@ type Message = {
 export default function Home() {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "Hello! I'm DocuChat AI. Ask me anything.", sender: "ai" },
+    {
+      id: 1,
+      text: "Hello! Please upload a document (PDF, TXT, DOC, DOCX) to get started. I can answer questions based on its content.",
+      sender: "ai",
+    },
   ]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -26,8 +30,23 @@ export default function Home() {
 
     // Add user message
     const userMessage: Message = { id: Date.now(), text: trimmed, sender: "user" };
-    setMessages([...messages, userMessage]);
     setMessage("");
+
+    // Guard: require document upload before chatting
+    if (!currentDocument) {
+      setMessages(prev => [
+        ...prev,
+        userMessage,
+        {
+          id: Date.now() + 1,
+          text: "⚠️ Please upload a document first before asking questions. Only PDF, TXT, DOC, and DOCX files are supported.",
+          sender: "ai",
+        },
+      ]);
+      return;
+    }
+
+    setMessages(prev => [...prev, userMessage]);
     setLoading(true);
 
     try {
@@ -251,7 +270,11 @@ export default function Home() {
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message..."
+              placeholder={
+                currentDocument
+                  ? `Ask questions about ${currentDocument}...`
+                  : "Upload a document (PDF, TXT, DOC, DOCX) first..."
+              }
               disabled={loading}
               className="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black disabled:opacity-70"
             />
