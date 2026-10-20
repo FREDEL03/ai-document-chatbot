@@ -37,6 +37,10 @@ export default function Home() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docLoading, setDocLoading] = useState(false);
+  const [docText, setDocText] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -315,6 +319,33 @@ export default function Home() {
     }
   };
 
+  const handleViewDocument = async () => {
+    if (!currentDocument && !currentDocumentId) return;
+    setShowDocModal(true);
+    setDocLoading(true);
+    setDocText(null);
+    try {
+      const supabase = getSupabaseClient();
+      let query = supabase.from("documents").select("extracted_text, id");
+      if (currentDocumentId) {
+        query = query.eq("id", currentDocumentId);
+      } else if (currentDocument) {
+        query = query.eq("original_name", currentDocument);
+        if (user?.id) query = query.eq("user_id", user.id);
+      }
+      const { data } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (data?.extracted_text) {
+        setDocText(data.extracted_text);
+      } else {
+        setDocText("No text preview available for this document.");
+      }
+    } catch {
+      setDocText("Failed to load document content.");
+    } finally {
+      setDocLoading(false);
+    }
+  };
+
   const quickPrompts = [
     "Summarize this document briefly",
     "What are the main key points?",
@@ -461,13 +492,23 @@ export default function Home() {
                 </div>
               </div>
 
-              <button
-                onClick={handleUploadClick}
-                className="w-full text-xs text-blue-400 hover:text-blue-300 hover:underline pt-1 text-left flex items-center gap-1 cursor-pointer"
-              >
-                <span>Switch document</span>
-                <span>→</span>
-              </button>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={handleViewDocument}
+                  className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>View content</span>
+                  <span>↗</span>
+                </button>
+                <span className="text-slate-600 text-xs">•</span>
+                <button
+                  onClick={handleUploadClick}
+                  className="text-xs text-slate-400 hover:text-slate-200 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Switch</span>
+                  <span>→</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="p-4 rounded-xl border border-dashed border-slate-800 text-center space-y-2 bg-slate-900/40">
@@ -523,9 +564,15 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <h2 className="font-semibold text-slate-100 text-sm sm:text-base">Document Assistant</h2>
                 {currentDocument && (
-                  <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20 max-w-[200px] truncate">
-                    📄 {currentDocument}
-                  </span>
+                  <button
+                    onClick={handleViewDocument}
+                    title="Click to view extracted document text"
+                    className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 max-w-[220px] truncate transition-colors cursor-pointer"
+                  >
+                    <span>📄</span>
+                    <span className="truncate">{currentDocument}</span>
+                    <span className="text-[10px] text-blue-400">↗</span>
+                  </button>
                 )}
               </div>
               <p className="text-xs text-slate-400">RAG Semantic Search & Q&A</p>
@@ -771,6 +818,57 @@ export default function Home() {
                 ) : (
                   "Sign Out"
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Uploaded Document Modal */}
+      {showDocModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="w-full max-w-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl flex flex-col max-h-[85vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
+                  📄
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-white truncate" title={currentDocument || "Document"}>
+                    {currentDocument || "Uploaded Document"}
+                  </h3>
+                  <p className="text-xs text-slate-400">Extracted document content used by AI</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDocModal(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Document Content */}
+            <div className="flex-1 overflow-y-auto my-4 pr-1 text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 sm:p-5 select-text">
+              {docLoading ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
+                  <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="font-sans text-xs">Loading document preview...</span>
+                </div>
+              ) : (
+                docText
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs text-slate-400 shrink-0">
+              <span>{docText ? `${docText.length.toLocaleString()} characters` : "0 characters"}</span>
+              <button
+                onClick={() => setShowDocModal(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium transition-colors cursor-pointer"
+              >
+                Close Preview
               </button>
             </div>
           </div>
