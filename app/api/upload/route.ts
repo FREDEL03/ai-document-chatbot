@@ -125,6 +125,10 @@ export async function POST(request: NextRequest) {
           };
         }
 
+        // Preload worker into memory to bypass Vercel filesystem missing module error
+        const pdfjsWorker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+        (globalThis as any).pdfjsWorker = pdfjsWorker;
+
         const { PDFParse } = await import("pdf-parse");
         const parser = new PDFParse({ data: new Uint8Array(buffer) });
         const result = await parser.getText();
