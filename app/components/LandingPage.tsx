@@ -1,6 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import {
+  FileText,
+  ShieldCheck,
+  Zap,
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  ChevronRight,
+  Menu,
+  X,
+} from "lucide-react";
 
 type LandingPageProps = {
   onGetStarted: () => void;
@@ -11,91 +22,80 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500/30 overflow-x-hidden">
-      {/* Glow Ambient Blobs */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-blue-600/10 via-indigo-600/5 to-transparent blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#FAFAF9] text-[#2B2B2E] flex flex-col font-sans selection:bg-[#5B6CFF]/20 overflow-x-hidden relative">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-10%,rgba(91,108,255,0.08),rgba(255,255,255,0))] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#E4E2DE_1px,transparent_1px),linear-gradient(to_bottom,#E4E2DE_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40 pointer-events-none" />
 
-      {/* Floating Modern Spacious Navbar */}
-      <header className="sticky top-0 z-40 w-full px-4 sm:px-8 lg:px-12 pt-3 sm:pt-5 pb-3">
-        <div className="max-w-6xl mx-auto h-16 sm:h-20 px-5 sm:px-8 rounded-2xl sm:rounded-3xl border border-slate-800/80 bg-slate-900/70 backdrop-blur-xl shadow-xl shadow-black/40 flex items-center justify-between transition-all">
-          {/* Brand Logo */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0 border border-blue-400/20">
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+      {/* Floating Header */}
+      <header className="sticky top-0 z-40 w-full px-4 sm:px-8 lg:px-12 pt-4 pb-3">
+        <div className="max-w-6xl mx-auto h-16 sm:h-20 px-6 sm:px-8 rounded-2xl sm:rounded-3xl border border-[#E4E2DE] bg-white/80 backdrop-blur-xl shadow-sm flex items-center justify-between transition-all">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-[#5B6CFF] flex items-center justify-center shadow-md shadow-[#5B6CFF]/25 shrink-0 text-white">
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div className="flex items-center gap-2.5">
-              <span className="font-bold text-lg sm:text-xl text-white tracking-tight">DocuChat AI</span>
-              <span className="hidden sm:inline-block px-2.5 py-0.5 text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full">
+              <span className="font-extrabold text-lg sm:text-xl text-[#2B2B2E] tracking-tight">DocuChat AI</span>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold bg-[#5B6CFF]/10 text-[#5B6CFF] border border-[#5B6CFF]/20 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#5B6CFF] animate-pulse" />
                 RAG 2.0
               </span>
             </div>
           </div>
 
-          {/* Desktop Navigation Links & Actions */}
-          <div className="hidden md:flex items-center gap-6">
-            <div className="flex items-center gap-1 text-sm font-medium text-slate-300">
-              <button
-                onClick={onLoginClick}
-                className="px-4 py-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
-              >
-                Sign In
-              </button>
-            </div>
+          {/* Navigation & CTA */}
+          <div className="hidden md:flex items-center gap-4">
+            <button
+              onClick={onLoginClick}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-[#F3F2F0] transition-colors cursor-pointer"
+            >
+              Sign In
+            </button>
             <button
               onClick={onGetStarted}
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:opacity-95 text-white font-semibold text-sm shadow-lg shadow-blue-600/25 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-[#5B6CFF] hover:bg-[#4a5be8] text-white font-semibold text-sm shadow-md shadow-[#5B6CFF]/25 active:scale-95 transition-all cursor-pointer flex items-center gap-2"
             >
-              <span>Get Started</span>
-              <span className="text-xs">→</span>
+              <span>Get Started Free</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Mobile Right Controls */}
-          <div className="flex md:hidden items-center gap-2.5">
+          {/* Mobile Menu Button */}
+          <div className="flex md:hidden items-center gap-2">
             <button
               onClick={onGetStarted}
-              className="text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-md shadow-blue-600/20 cursor-pointer"
+              className="text-xs font-semibold bg-[#5B6CFF] hover:bg-[#4a5be8] text-white px-3.5 py-2 rounded-xl shadow-sm cursor-pointer"
             >
               Get Started
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/70 border border-slate-800 cursor-pointer transition-colors"
-              aria-label="Toggle navigation"
+              className="p-2 rounded-xl text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-[#F3F2F0] border border-[#E4E2DE] cursor-pointer transition-colors"
             >
-              {mobileMenuOpen ? (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu Card */}
+        {/* Mobile Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden max-w-6xl mx-auto mt-2 p-3 rounded-2xl border border-slate-800/90 bg-slate-900/95 backdrop-blur-xl shadow-2xl space-y-1.5 animate-in slide-in-from-top-2 duration-150">
+          <div className="md:hidden max-w-6xl mx-auto mt-2 p-3 rounded-2xl border border-[#E4E2DE] bg-white/95 backdrop-blur-xl shadow-xl space-y-1.5 animate-in slide-in-from-top-2 duration-150">
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
                 onLoginClick();
               }}
-              className="w-full text-left py-3 px-4 rounded-xl text-sm text-slate-200 hover:bg-slate-800 font-medium cursor-pointer transition-colors"
+              className="w-full text-left py-3 px-4 rounded-xl text-sm text-[#2B2B2E] hover:bg-[#F3F2F0] font-medium cursor-pointer transition-colors"
             >
-              Sign In to Existing Account
+              Sign In
             </button>
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
                 onGetStarted();
               }}
-              className="w-full text-center py-3 px-4 rounded-xl text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-md shadow-blue-600/20 cursor-pointer"
+              className="w-full text-center py-3 px-4 rounded-xl text-sm bg-[#5B6CFF] hover:bg-[#4a5be8] text-white font-semibold shadow-sm cursor-pointer"
             >
               Create Free Account
             </button>
@@ -104,112 +104,142 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col items-center justify-center text-center relative z-10">
-        {/* Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-[11px] sm:text-xs text-slate-300 mb-6 sm:mb-8 animate-in fade-in duration-300 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <span>Gemini 2.5 Flash + Supabase Vector RAG</span>
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 flex flex-col items-center justify-center text-center relative z-10">
+        {/* Modern Pill Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-[#E4E2DE] text-xs text-[#6B6B73] mb-6 sm:mb-8 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-[#5B6CFF]" />
+          <span className="font-medium text-[#2B2B2E]">Powered by Gemini AI & Supabase Vector RAG</span>
+          <ChevronRight className="w-3.5 h-3.5 text-[#6B6B73]" />
         </div>
 
-        {/* Hero Headline */}
-        <h1 className="text-3xl xs:text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-3xl leading-tight">
-          Talk to your documents with{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-teal-300">
-            instant precision.
+        {/* Headline */}
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-[#2B2B2E] max-w-4xl leading-[1.1]">
+          Chat with your documents in{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5B6CFF] via-[#7483ff] to-[#4a5be8]">
+            natural clarity.
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg text-slate-400 max-w-2xl leading-relaxed px-2">
-          Upload PDF, DOCX, or TXT documents. Ask questions and get instant, accurate answers extracted straight from your files with zero hallucination.
+        <p className="mt-5 sm:mt-7 text-base sm:text-lg lg:text-xl text-[#6B6B73] max-w-2xl leading-relaxed">
+          Drop any PDF, TXT, DOC or DOCX file. Ask specific questions, produce summaries, and extract citations with zero hallucination.
         </p>
 
         {/* CTA Buttons */}
-        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto max-w-md sm:max-w-none">
+        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto">
           <button
             onClick={onGetStarted}
-            className="px-7 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm sm:text-base shadow-xl shadow-blue-600/25 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-[#5B6CFF] hover:bg-[#4a5be8] text-white font-semibold text-base shadow-lg shadow-[#5B6CFF]/25 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2.5"
           >
-            <span>Start Chatting Free</span>
-            <span>→</span>
+            <span>Start Chatting Now</span>
+            <ArrowRight className="w-5 h-5" />
           </button>
           <button
             onClick={onLoginClick}
-            className="px-7 py-3.5 sm:py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-200 font-medium text-sm sm:text-base transition-all cursor-pointer flex items-center justify-center"
+            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white hover:bg-[#F3F2F0] border border-[#E4E2DE] text-[#2B2B2E] font-medium text-base shadow-xs transition-all cursor-pointer flex items-center justify-center"
           >
-            Sign in
+            Sign In to Existing Account
           </button>
         </div>
 
-        {/* Preview Card Mockup */}
-        <div className="mt-12 sm:mt-16 w-full max-w-2xl rounded-2xl bg-gradient-to-b from-slate-900/90 to-slate-950/90 border border-slate-800/80 p-4 sm:p-6 shadow-2xl text-left space-y-3.5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-300 truncate">
-              <span className="p-1 rounded bg-blue-500/10 text-blue-400">📄</span>
-              <span className="truncate">Quarterly_Report_2026.pdf</span>
+        {/* Trust Badges */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-[#6B6B73]">
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>100% Free to Use</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-[#5B6CFF]" />
+            <span>Private User Isolation</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-4 h-4 text-amber-500" />
+            <span>Sub-second Retrieval</span>
+          </div>
+        </div>
+
+        {/* Mockup Preview Window */}
+        <div className="mt-14 sm:mt-20 w-full max-w-3xl rounded-3xl bg-white border border-[#E4E2DE] shadow-xl shadow-black/5 p-4 sm:p-6 text-left relative overflow-hidden">
+          {/* Window Header */}
+          <div className="flex items-center justify-between pb-4 border-b border-[#E4E2DE]">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-red-400" />
+              <span className="w-3 h-3 rounded-full bg-amber-400" />
+              <span className="w-3 h-3 rounded-full bg-emerald-400" />
+              <span className="ml-2 text-xs font-mono text-[#6B6B73]">Quarterly_Financial_Report_2026.pdf</span>
             </div>
-            <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">
-              Ready
-            </span>
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Indexed & Ready
+            </div>
           </div>
 
-          <div className="space-y-2.5 text-xs sm:text-sm">
+          {/* Chat Preview Messages */}
+          <div className="py-4 space-y-3.5 text-xs sm:text-sm">
             <div className="flex justify-end">
-              <div className="bg-blue-600 text-white px-3.5 py-2 rounded-xl rounded-tr-xs max-w-[85%]">
-                What were the total accomplishments on Day 3?
+              <div className="bg-[#E8EAFF] text-[#2B2B2E] border border-[#5B6CFF]/20 px-4 py-2.5 rounded-2xl rounded-tr-xs max-w-[85%] font-medium">
+                What are the key drivers for Q3 revenue growth according to page 4?
               </div>
             </div>
-            <div className="flex justify-start">
-              <div className="bg-slate-800/90 border border-slate-700/60 text-slate-200 px-3.5 py-2.5 rounded-xl rounded-tl-xs max-w-[90%] leading-relaxed">
-                Based on Section 2 of your document, the team finalized the database schema, deployed the RAG indexing pipeline, and tested 4 sample files.
+            <div className="flex justify-start items-start gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-[#5B6CFF]/10 border border-[#5B6CFF]/20 text-[#5B6CFF] flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-3.5 h-3.5" />
+              </div>
+              <div className="bg-[#F3F2F0] border border-[#E4E2DE] text-[#2B2B2E] px-4 py-3 rounded-2xl rounded-tl-xs max-w-[90%] leading-relaxed space-y-1.5">
+                <p>According to Section 3.2 on Page 4, the 28% YoY growth was driven by:</p>
+                <ul className="list-disc pl-4 space-y-1 text-[#6B6B73]">
+                  <li><strong className="text-[#2B2B2E]">Enterprise Cloud Expansion:</strong> Accounted for $4.2M in new ARR.</li>
+                  <li><strong className="text-[#2B2B2E]">Operational Efficiency:</strong> Server maintenance overhead fell by 14%.</li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Feature Cards Grid */}
-        <div className="mt-16 sm:mt-24 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 text-left w-full">
-          <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs space-y-2.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <h2 className="text-base font-semibold text-white">Full User Isolation</h2>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Every user account is protected by Supabase Row-Level Security. Other people can never see or search your files.
-            </p>
+        {/* 3 Step Process */}
+        <div className="mt-20 sm:mt-28 w-full max-w-4xl">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#2B2B2E] tracking-tight">How DocuChat AI Works</h2>
+            <p className="text-sm text-[#6B6B73] mt-2">Simple 3-step pipeline for fast, factual document insights</p>
           </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs space-y-2.5">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            <div className="p-6 rounded-2xl bg-white border border-[#E4E2DE] shadow-xs relative group hover:border-[#5B6CFF]/40 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-[#5B6CFF]/10 border border-[#5B6CFF]/20 text-[#5B6CFF] flex items-center justify-center mb-4 font-bold text-lg">
+                1
+              </div>
+              <h3 className="text-base font-semibold text-[#2B2B2E] mb-2">Upload Files</h3>
+              <p className="text-xs text-[#6B6B73] leading-relaxed">
+                Drag and drop your PDF, DOCX, or text files directly. Our server stores and secures it privately under your account.
+              </p>
             </div>
-            <h2 className="text-base font-semibold text-white">Smart RAG Chunking</h2>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Documents are automatically broken into overlapping semantic chunks so AI finds the exact sentence needed.
-            </p>
-          </div>
 
-          <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-xs space-y-2.5 sm:col-span-2 lg:col-span-1">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+            <div className="p-6 rounded-2xl bg-white border border-[#E4E2DE] shadow-xs relative group hover:border-[#5B6CFF]/40 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-[#5B6CFF]/10 border border-[#5B6CFF]/20 text-[#5B6CFF] flex items-center justify-center mb-4 font-bold text-lg">
+                2
+              </div>
+              <h3 className="text-base font-semibold text-[#2B2B2E] mb-2">Vector Indexing</h3>
+              <p className="text-xs text-[#6B6B73] leading-relaxed">
+                The document is parsed into semantic chunks and embedded in Supabase pgvector for sub-second retrieval.
+              </p>
             </div>
-            <h2 className="text-base font-semibold text-white">Multiple File Formats</h2>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Upload PDF, TXT, DOC, or DOCX documents up to 4.5 MB with smooth real-time typewriter responses.
-            </p>
+
+            <div className="p-6 rounded-2xl bg-white border border-[#E4E2DE] shadow-xs relative group hover:border-[#5B6CFF]/40 transition-colors">
+              <div className="w-12 h-12 rounded-xl bg-[#5B6CFF]/10 border border-[#5B6CFF]/20 text-[#5B6CFF] flex items-center justify-center mb-4 font-bold text-lg">
+                3
+              </div>
+              <h3 className="text-base font-semibold text-[#2B2B2E] mb-2">Ask Anything</h3>
+              <p className="text-xs text-[#6B6B73] leading-relaxed">
+                Chat naturally. Gemini inspects the exact relevant chunks to formulate factual, cited answers with no hallucinations.
+              </p>
+            </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-6 sm:py-8 border-t border-slate-900 text-center text-xs text-slate-400 px-4">
-        © {new Date().getFullYear()} DocuChat AI. Built with Next.js, Gemini & Supabase.
+      <footer className="py-8 border-t border-[#E4E2DE] text-center text-xs text-[#6B6B73] px-4 relative z-10">
+        © {new Date().getFullYear()} DocuChat AI. Secured with Supabase RLS & Gemini 2.5 Flash.
       </footer>
     </div>
   );

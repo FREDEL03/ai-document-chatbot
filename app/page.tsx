@@ -1,6 +1,25 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
+import {
+  FileText,
+  Upload,
+  Send,
+  Loader2,
+  LogOut,
+  ExternalLink,
+  Menu,
+  X,
+  FileCheck2,
+  Sparkles,
+  Paperclip,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import { getSupabaseClient } from "@/src/lib/supabase-client";
 import { LandingPage } from "@/app/components/LandingPage";
 import { AuthModal } from "@/app/components/AuthModal";
@@ -42,7 +61,6 @@ export default function Home() {
   const [docUrl, setDocUrl] = useState<string | null>(null);
   const [docText, setDocText] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Check active Supabase auth session
@@ -125,6 +143,7 @@ export default function Home() {
     setMessage("");
 
     if (!currentDocument) {
+      toast.warning("Please upload a document first.");
       setMessages((prev) => [
         ...prev,
         userMessage,
@@ -191,6 +210,7 @@ export default function Home() {
       }, 16);
     } catch (error: any) {
       console.error("Chat error:", error);
+      toast.error(error?.message || "Failed to process chat");
       setMessages((prev) => [
         ...prev,
         {
@@ -205,30 +225,15 @@ export default function Home() {
     }
   };
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validTypes = [
-      "application/pdf",
-      "text/plain",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
-    if (!validTypes.includes(file.type)) {
-      alert("Please upload PDF, TXT, or DOC/DOCX files only.");
-      return;
-    }
+  const uploadFile = async (file: File) => {
     if (file.size > 4.5 * 1024 * 1024) {
-      alert("File size must be under 4.5 MB on Vercel.");
+      toast.error("File size must be under 4.5 MB.");
       return;
     }
 
     setUploading(true);
+    const toastId = toast.loading(`Uploading and indexing "${file.name}"...`);
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -258,6 +263,8 @@ export default function Home() {
       setCurrentDocument(file.name);
       setCurrentDocumentId(data.documentId || null);
 
+      toast.success(`"${file.name}" ready for chat!`, { id: toastId });
+
       setMessages((prev) => [
         ...prev,
         {
@@ -270,6 +277,7 @@ export default function Home() {
       setSidebarOpen(false);
     } catch (error: any) {
       console.error("Upload error:", error);
+      toast.error(error?.message || "Failed to upload document", { id: toastId });
       setMessages((prev) => [
         ...prev,
         {
@@ -281,9 +289,27 @@ export default function Home() {
       ]);
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      uploadFile(acceptedFiles[0]);
+    }
+  }, [user?.id]);
+
+  const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
+    onDrop,
+    noClick: true,
+    noKeyboard: true,
+    multiple: false,
+    accept: {
+      "application/pdf": [".pdf"],
+      "text/plain": [".txt"],
+      "application/msword": [".doc"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+    },
+  });
 
   const handleClearChat = () => {
     setMessages([
@@ -297,6 +323,7 @@ export default function Home() {
       },
     ]);
     setShowClearConfirm(false);
+    toast.info("Conversation cleared");
   };
 
   const handleSignOut = async () => {
@@ -315,6 +342,7 @@ export default function Home() {
       setCurrentDocument(null);
       setCurrentDocumentId(null);
       setShowSignOutConfirm(false);
+      toast.success("Signed out successfully");
     } finally {
       setSigningOut(false);
     }
@@ -347,6 +375,7 @@ export default function Home() {
       setDocText(data?.extracted_text || null);
     } catch {
       setDocText("Failed to load document content.");
+      toast.error("Failed to load document content");
     } finally {
       setDocLoading(false);
     }
@@ -358,19 +387,17 @@ export default function Home() {
     "Extract important action items or dates",
   ];
 
-  // Loading state while verifying auth
   if (authChecking) {
     return (
-      <div className="h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+      <div className="h-screen bg-[#FAFAF9] flex items-center justify-center text-[#6B6B73]">
         <div className="flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span>Loading DocuChat AI...</span>
+          <Loader2 className="w-5 h-5 text-[#5B6CFF] animate-spin" />
+          <span className="text-sm font-medium">Loading DocuChat AI...</span>
         </div>
       </div>
     );
   }
 
-  // If user is not logged in, render the Landing Page
   if (!user) {
     return (
       <>
@@ -397,102 +424,100 @@ export default function Home() {
     );
   }
 
-  // Main App Chat Interface for Logged-In User
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept=".pdf,.txt,.doc,.docx"
-        className="hidden"
-      />
+    <div
+      {...getRootProps()}
+      className="flex h-screen bg-[#FAFAF9] text-[#2B2B2E] overflow-hidden font-sans relative"
+    >
+      <input {...getInputProps()} />
+
+      {/* Drag & Drop Visual Overlay */}
+      {isDragActive && (
+        <div className="absolute inset-0 z-50 bg-[#E8EAFF]/90 backdrop-blur-sm border-2 border-dashed border-[#5B6CFF] flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-150">
+          <div className="p-4 rounded-2xl bg-[#5B6CFF]/15 border border-[#5B6CFF]/30 text-[#5B6CFF] mb-3 animate-bounce">
+            <Upload className="w-10 h-10" />
+          </div>
+          <p className="text-xl font-bold text-[#2B2B2E]">Drop your document here</p>
+          <p className="text-xs text-[#6B6B73] mt-1">PDF, TXT, DOC, DOCX up to 4.5MB</p>
+        </div>
+      )}
 
       {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-black/60 z-40 backdrop-blur-xs sm:hidden"
+          className="fixed inset-0 bg-[#2B2B2E]/40 z-40 backdrop-blur-xs sm:hidden"
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed sm:static inset-y-0 left-0 z-50 w-72 bg-slate-900/95 border-r border-slate-800/80 flex flex-col transition-transform duration-200 ease-in-out backdrop-blur-md ${
+        className={`fixed sm:static inset-y-0 left-0 z-50 w-72 bg-[#F3F2F0] border-r border-[#E4E2DE] flex flex-col transition-transform duration-200 ease-in-out shrink-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
         }`}
       >
         {/* Brand / Logo */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-5 border-b border-[#E4E2DE] flex items-center justify-between bg-white/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+            <div className="w-10 h-10 rounded-2xl bg-[#5B6CFF] flex items-center justify-center shadow-md shadow-[#5B6CFF]/20 text-white">
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-bold text-lg text-white tracking-tight">DocuChat AI</h1>
-              <p className="text-xs text-blue-400 font-medium truncate max-w-[140px]">{user.email}</p>
+              <h1 className="font-bold text-lg text-[#2B2B2E] tracking-tight">DocuChat AI</h1>
+              <p className="text-xs text-[#6B6B73] font-medium truncate max-w-[140px]">{user.email}</p>
             </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="sm:hidden text-slate-400 hover:text-white p-1"
+            className="sm:hidden text-[#6B6B73] hover:text-[#2B2B2E] p-1 cursor-pointer"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Upload Action */}
         <div className="p-4 space-y-3">
           <button
-            onClick={handleUploadClick}
+            onClick={openFileDialog}
             disabled={uploading}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold shadow-md shadow-blue-600/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full py-3 px-4 rounded-xl bg-[#5B6CFF] hover:bg-[#4a5be8] text-white font-semibold shadow-md shadow-[#5B6CFF]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {uploading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Processing...</span>
               </>
             ) : (
               <>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
+                <Upload className="w-5 h-5" />
                 <span>Upload Document</span>
               </>
             )}
           </button>
 
-          <p className="text-[11px] text-slate-400 text-center">
+          <p className="text-[11px] text-[#6B6B73] text-center">
             Supports PDF, TXT, DOC, DOCX up to 4.5MB
           </p>
         </div>
 
         {/* Active Document Section */}
         <div className="flex-1 px-4 py-2 overflow-y-auto">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 px-1">
+          <div className="text-xs font-semibold uppercase tracking-wider text-[#6B6B73] mb-2 px-1">
             Current Document
           </div>
 
           {currentDocument ? (
-            <div className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2">
+            <div className="p-3.5 rounded-xl bg-white border border-[#E4E2DE] shadow-xs space-y-2">
               <div className="flex items-start gap-2.5">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 mt-0.5">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
+                <div className="p-2 rounded-lg bg-[#5B6CFF]/10 text-[#5B6CFF] mt-0.5">
+                  <FileCheck2 className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate" title={currentDocument}>
+                  <p className="text-sm font-semibold text-[#2B2B2E] truncate" title={currentDocument}>
                     {currentDocument}
                   </p>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 mt-0.5 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     Indexed & Ready
                   </span>
                 </div>
@@ -501,15 +526,15 @@ export default function Home() {
               <div className="flex items-center gap-2 pt-1">
                 <button
                   onClick={handleViewDocument}
-                  className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-[#5B6CFF] hover:underline flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <span>View content</span>
-                  <span>↗</span>
+                  <ExternalLink className="w-3 h-3" />
                 </button>
-                <span className="text-slate-600 text-xs">•</span>
+                <span className="text-[#E4E2DE] text-xs">•</span>
                 <button
-                  onClick={handleUploadClick}
-                  className="text-xs text-slate-400 hover:text-slate-200 hover:underline flex items-center gap-1 cursor-pointer"
+                  onClick={openFileDialog}
+                  className="text-xs text-[#6B6B73] hover:text-[#2B2B2E] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <span>Switch</span>
                   <span>→</span>
@@ -517,77 +542,72 @@ export default function Home() {
               </div>
             </div>
           ) : (
-            <div className="p-4 rounded-xl border border-dashed border-slate-800 text-center space-y-2 bg-slate-900/40">
-              <div className="w-8 h-8 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-slate-400">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
+            <div
+              onClick={openFileDialog}
+              className="p-4 rounded-xl border border-dashed border-[#E4E2DE] text-center space-y-2 bg-white/60 hover:bg-white hover:border-[#5B6CFF]/40 transition-all cursor-pointer"
+            >
+              <div className="w-8 h-8 mx-auto rounded-full bg-[#F3F2F0] flex items-center justify-center text-[#6B6B73]">
+                <FileText className="w-4 h-4" />
               </div>
-              <p className="text-xs text-slate-400">No document uploaded yet</p>
+              <p className="text-xs text-[#6B6B73]">Click or drag file to upload</p>
             </div>
           )}
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-800/80 space-y-2">
+        <div className="p-4 border-t border-[#E4E2DE] space-y-2 bg-white/50">
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+            <RotateCcw className="w-4 h-4" />
             Clear Conversation
           </button>
 
           <button
             onClick={() => setShowSignOutConfirm(true)}
-            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <LogOut className="w-4 h-4" />
             Sign Out
           </button>
         </div>
       </aside>
 
       {/* Main Chat Panel */}
-      <main className="flex-1 flex flex-col bg-slate-950 relative">
+      <main className="flex-1 flex flex-col bg-[#FAFAF9] relative">
         {/* Header Bar */}
-        <header className="h-16 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
+        <header className="h-16 border-b border-[#E4E2DE] bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="sm:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              className="sm:hidden p-2 rounded-lg text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-[#F3F2F0] cursor-pointer"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="w-5 h-5" />
             </button>
 
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-slate-100 text-sm sm:text-base">Document Assistant</h2>
+                <h2 className="font-semibold text-[#2B2B2E] text-sm sm:text-base">Document Assistant</h2>
                 {currentDocument && (
                   <button
                     onClick={handleViewDocument}
-                    title="Click to view extracted document text"
-                    className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 max-w-[220px] truncate transition-colors cursor-pointer"
+                    title="Click to view document"
+                    className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#5B6CFF]/10 text-[#5B6CFF] border border-[#5B6CFF]/20 max-w-[220px] truncate transition-colors cursor-pointer"
                   >
-                    <span>📄</span>
+                    <FileText className="w-3.5 h-3.5" />
                     <span className="truncate">{currentDocument}</span>
-                    <span className="text-[10px] text-blue-400">↗</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-400">RAG Semantic Search & Q&A</p>
+              <p className="text-xs text-[#6B6B73]">RAG Semantic Search & Q&A</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
-              <span className={`w-2 h-2 rounded-full ${currentDocument ? "bg-emerald-400" : "bg-amber-400"}`} />
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E4E2DE] text-xs font-medium text-[#2B2B2E] shadow-xs">
+              <span className={`w-2 h-2 rounded-full ${currentDocument ? "bg-emerald-500" : "bg-amber-400"}`} />
               <span>{currentDocument ? "Document Loaded" : "Upload Required"}</span>
             </div>
           </div>
@@ -598,13 +618,11 @@ export default function Home() {
           {messages.length === 0 ? (
             <div className="h-full flex items-center justify-center p-4">
               <div className="max-w-md text-center space-y-3">
-                <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-                  <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                  </svg>
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-[#5B6CFF]/10 border border-[#5B6CFF]/20 flex items-center justify-center text-[#5B6CFF]">
+                  <Sparkles className="w-7 h-7" />
                 </div>
-                <h3 className="text-xl font-bold text-white">How can I help you today?</h3>
-                <p className="text-sm text-slate-400">
+                <h3 className="text-xl font-bold text-[#2B2B2E]">How can I help you today?</h3>
+                <p className="text-sm text-[#6B6B73]">
                   Upload a PDF or document, then ask specific questions or request summaries.
                 </p>
               </div>
@@ -622,36 +640,36 @@ export default function Home() {
                   <div
                     className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
                       msg.sender === "user"
-                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                        : "bg-slate-800 text-indigo-400 border border-slate-700"
+                        ? "bg-[#5B6CFF] text-white shadow-sm"
+                        : "bg-white text-[#5B6CFF] border border-[#E4E2DE] shadow-xs"
                     }`}
                   >
-                    {msg.sender === "user" ? (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                    )}
+                    {msg.sender === "user" ? "U" : <Sparkles className="w-4 h-4" />}
                   </div>
 
                   {/* Message Bubble */}
                   <div
                     className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 shadow-xs space-y-1 ${
                       msg.sender === "user"
-                        ? "bg-blue-600 text-white rounded-tr-xs"
-                        : "bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-xs"
+                        ? "bg-[#E8EAFF] text-[#2B2B2E] border border-[#5B6CFF]/25 rounded-tr-xs font-medium"
+                        : "bg-white border border-[#E4E2DE] text-[#2B2B2E] rounded-tl-xs"
                     }`}
                   >
-                    <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap">
-                      {msg.text}
-                    </p>
+                    {msg.sender === "user" ? (
+                      <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap">
+                        {msg.text}
+                      </p>
+                    ) : (
+                      <div className="text-sm sm:text-[15px] leading-relaxed space-y-2 prose max-w-none prose-p:leading-relaxed prose-pre:bg-[#F3F2F0] prose-pre:border prose-pre:border-[#E4E2DE] prose-pre:text-[#2B2B2E]">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {msg.text}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                     {msg.timestamp && (
                       <div
-                        className={`text-[10px] text-right font-medium ${
-                          msg.sender === "user" ? "text-blue-200/70" : "text-slate-400"
+                        className={`text-[10px] text-right font-medium pt-1 ${
+                          msg.sender === "user" ? "text-[#5B6CFF]" : "text-[#6B6B73]"
                         }`}
                       >
                         {msg.timestamp}
@@ -661,19 +679,17 @@ export default function Home() {
                 </div>
               ))}
 
-              {/* Typing / Loading indicator */}
+              {/* Typing indicator */}
               {loading && (
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-slate-800 text-indigo-400 border border-slate-700 flex items-center justify-center shrink-0">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                  <div className="w-8 h-8 rounded-xl bg-white text-[#5B6CFF] border border-[#E4E2DE] flex items-center justify-center shrink-0 shadow-xs">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#5B6CFF]" />
                   </div>
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-tl-xs px-4 py-3">
+                  <div className="bg-white border border-[#E4E2DE] rounded-2xl rounded-tl-xs px-4 py-3 shadow-xs">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" />
-                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce [animation-delay:0.2s]" />
-                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce [animation-delay:0.4s]" />
+                      <span className="w-2 h-2 rounded-full bg-[#5B6CFF] animate-bounce" />
+                      <span className="w-2 h-2 rounded-full bg-[#5B6CFF] animate-bounce [animation-delay:0.2s]" />
+                      <span className="w-2 h-2 rounded-full bg-[#5B6CFF] animate-bounce [animation-delay:0.4s]" />
                     </div>
                   </div>
                 </div>
@@ -684,16 +700,16 @@ export default function Home() {
           )}
         </div>
 
-        {/* Quick Suggestion Chips */}
+        {/* Suggestion Chips */}
         {currentDocument && messages.length <= 3 && !loading && (
           <div className="px-4 sm:px-6 max-w-3xl mx-auto w-full pb-2">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <span className="text-xs text-slate-400 shrink-0">Try asking:</span>
+              <span className="text-xs text-[#6B6B73] shrink-0">Try asking:</span>
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleSend(undefined, prompt)}
-                  className="text-xs bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 py-1.5 px-3 rounded-full whitespace-nowrap transition-colors cursor-pointer"
+                  className="text-xs bg-white hover:bg-[#F3F2F0] border border-[#E4E2DE] hover:border-[#5B6CFF]/40 text-[#2B2B2E] py-1.5 px-3 rounded-full whitespace-nowrap transition-colors cursor-pointer shadow-xs"
                 >
                   {prompt} →
                 </button>
@@ -703,20 +719,17 @@ export default function Home() {
         )}
 
         {/* Input Bar */}
-        <div className="p-4 sm:p-5 border-t border-slate-800/80 bg-slate-900/60 backdrop-blur-md">
+        <div className="p-4 sm:p-5 border-t border-[#E4E2DE] bg-white/80 backdrop-blur-md">
           <form onSubmit={handleSend} className="max-w-3xl mx-auto">
-            <div className="relative flex items-center bg-slate-900 border border-slate-800 focus-within:border-blue-500/80 rounded-2xl p-1.5 shadow-lg shadow-black/20 transition-all">
-              {/* Upload Paperclip Button */}
+            <div className="relative flex items-center bg-[#FAFAF9] border border-[#E4E2DE] focus-within:border-[#5B6CFF] rounded-2xl p-1.5 shadow-sm transition-all">
               <button
                 type="button"
-                onClick={handleUploadClick}
+                onClick={openFileDialog}
                 disabled={uploading}
                 title="Upload document"
-                className="p-2.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
+                className="p-2.5 text-[#6B6B73] hover:text-[#5B6CFF] hover:bg-white rounded-xl transition-colors cursor-pointer shrink-0"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
+                <Paperclip className="w-5 h-5" />
               </button>
 
               <input
@@ -729,22 +742,19 @@ export default function Home() {
                     : "Upload a document (PDF, TXT, DOC, DOCX) to start..."
                 }
                 disabled={loading}
-                className="flex-1 bg-transparent px-3 py-2 text-sm sm:text-base text-slate-100 placeholder-slate-400 focus:outline-none disabled:opacity-60"
+                className="flex-1 bg-transparent px-3 py-2 text-sm sm:text-base text-[#2B2B2E] placeholder-[#6B6B73] focus:outline-none disabled:opacity-60"
               />
 
-              {/* Send Button */}
               <button
                 type="submit"
                 disabled={!message.trim() || loading}
-                className="p-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white disabled:text-slate-400 rounded-xl transition-all disabled:cursor-not-allowed cursor-pointer shrink-0"
+                className="p-2.5 bg-[#5B6CFF] hover:bg-[#4a5be8] disabled:bg-[#E4E2DE] text-white disabled:text-[#6B6B73] rounded-xl transition-all disabled:cursor-not-allowed cursor-pointer shrink-0"
               >
-                <svg className="w-5 h-5 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <Send className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 px-2 pt-2">
-              <span>Press Enter to send message</span>
+            <div className="flex items-center justify-between text-[11px] text-[#6B6B73] px-2 pt-2">
+              <span>Press Enter to send • Drag & drop anywhere</span>
               {currentDocument && <span className="truncate max-w-[200px]">Active: {currentDocument}</span>}
             </div>
           </form>
@@ -753,16 +763,14 @@ export default function Home() {
 
       {/* Clear Chat Confirmation Dialog */}
       {showClearConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl text-center space-y-4">
-            <div className="w-12 h-12 mx-auto rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">Clear entire conversation?</h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <h3 className="text-base font-semibold text-[#2B2B2E]">Clear entire conversation?</h3>
+              <p className="text-xs text-[#6B6B73] mt-1">
                 This will reset your current chat messages. Your uploaded document will remain loaded.
               </p>
             </div>
@@ -770,14 +778,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setShowClearConfirm(false)}
-                className="py-2.5 px-4 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
+                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleClearChat}
-                className="py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white shadow-lg shadow-amber-600/25 transition-all cursor-pointer flex items-center justify-center"
+                className="py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white shadow-md shadow-amber-600/25 transition-all cursor-pointer flex items-center justify-center"
               >
                 Clear Chat
               </button>
@@ -788,16 +796,14 @@ export default function Home() {
 
       {/* Sign Out Confirmation Dialog */}
       {showSignOutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-6 shadow-2xl text-center space-y-4">
-            <div className="w-12 h-12 mx-auto rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
+              <LogOut className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-white">Sign out of DocuChat AI?</h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <h3 className="text-base font-semibold text-[#2B2B2E]">Sign out of DocuChat AI?</h3>
+              <p className="text-xs text-[#6B6B73] mt-1">
                 You will need to sign back in to access your uploaded documents and chats.
               </p>
             </div>
@@ -806,7 +812,7 @@ export default function Home() {
                 type="button"
                 disabled={signingOut}
                 onClick={() => setShowSignOutConfirm(false)}
-                className="py-2.5 px-4 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors cursor-pointer disabled:opacity-50"
+                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -814,11 +820,11 @@ export default function Home() {
                 type="button"
                 disabled={signingOut}
                 onClick={handleSignOut}
-                className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-semibold text-white shadow-lg shadow-red-600/25 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-semibold text-white shadow-md shadow-red-600/25 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {signingOut ? (
                   <>
-                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     <span>Signing out...</span>
                   </>
                 ) : (
@@ -832,19 +838,18 @@ export default function Home() {
 
       {/* View Uploaded Document Modal */}
       {showDocModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="w-full max-w-4xl h-[90vh] bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-800 shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#2B2B2E]/40 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="w-full max-w-4xl h-[90vh] bg-white border border-[#E4E2DE] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#E4E2DE] shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/20">
-                  📄
+                <div className="w-9 h-9 rounded-xl bg-[#5B6CFF]/10 text-[#5B6CFF] flex items-center justify-center shrink-0 border border-[#5B6CFF]/20">
+                  <FileText className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm sm:text-base font-semibold text-white truncate" title={currentDocument || "Document"}>
+                  <h3 className="text-sm sm:text-base font-semibold text-[#2B2B2E] truncate" title={currentDocument || "Document"}>
                     {currentDocument || "Uploaded Document"}
                   </h3>
-                  <p className="text-[11px] text-slate-400">Full visual document viewer</p>
+                  <p className="text-[11px] text-[#6B6B73]">Full visual document viewer</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -853,27 +858,26 @@ export default function Home() {
                     href={docUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3F2F0] hover:bg-[#E4E2DE] text-xs font-medium text-[#2B2B2E] transition-colors"
                   >
                     <span>Open in new tab</span>
-                    <span>↗</span>
+                    <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
                 <button
                   onClick={() => setShowDocModal(false)}
-                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-2 text-[#6B6B73] hover:text-[#2B2B2E] rounded-xl hover:bg-[#F3F2F0] transition-colors cursor-pointer"
                 >
-                  ✕
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Document Full View Area */}
-            <div className="flex-1 my-3 overflow-hidden rounded-2xl bg-slate-950 border border-slate-800 flex flex-col">
+            <div className="flex-1 my-3 overflow-hidden rounded-2xl bg-[#FAFAF9] border border-[#E4E2DE] flex flex-col">
               {docLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="font-sans text-xs">Loading document preview...</span>
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#6B6B73]">
+                  <Loader2 className="w-6 h-6 text-[#5B6CFF] animate-spin" />
+                  <span className="font-sans text-xs font-medium">Loading document preview...</span>
                 </div>
               ) : docUrl && currentDocument?.toLowerCase().endsWith(".pdf") ? (
                 <iframe
@@ -887,22 +891,21 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  <div className="p-3 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-300 flex items-center justify-between">
-                    <span>💡 Storage bucket &apos;documents&apos; not found in Supabase. Showing extracted text representation:</span>
+                  <div className="p-3 bg-amber-50 border-b border-amber-200 text-[11px] text-amber-800 flex items-center justify-between">
+                    <span>💡 Showing extracted text representation:</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-[#2B2B2E] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
                     {docText || "No text available for this document."}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between pt-2 text-xs text-slate-400 shrink-0">
+            <div className="flex items-center justify-between pt-2 text-xs text-[#6B6B73] shrink-0">
               <span className="truncate max-w-[250px]">{currentDocument}</span>
               <button
                 onClick={() => setShowDocModal(false)}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#5B6CFF] hover:bg-[#4a5be8] text-white font-medium transition-colors cursor-pointer"
               >
                 Done
               </button>
