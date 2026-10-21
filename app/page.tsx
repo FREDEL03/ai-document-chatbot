@@ -41,7 +41,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "👋 Welcome to DocuChat AI! Upload a document (PDF, TXT, DOC, DOCX) to start asking questions about its contents.",
+      text: "👋 Hello! I'm DocuChat AI. You can chat with me freely, or upload a document (PDF, TXT, DOC, DOCX) to ask questions about its content.",
       sender: "ai",
       timestamp: "Just now",
     },
@@ -141,22 +141,6 @@ export default function Home() {
     };
 
     setMessage("");
-
-    if (!currentDocument) {
-      toast.warning("Please upload a document first.");
-      setMessages((prev) => [
-        ...prev,
-        userMessage,
-        {
-          id: Date.now() + 1,
-          text: "⚠️ Please upload a document first before asking questions. Only PDF, TXT, DOC, and DOCX files (max 4.5 MB) are supported.",
-          sender: "ai",
-          timestamp: timeString,
-        },
-      ]);
-      return;
-    }
-
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
@@ -607,8 +591,8 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E4E2DE] text-xs font-medium text-[#2B2B2E] shadow-xs">
-              <span className={`w-2 h-2 rounded-full ${currentDocument ? "bg-emerald-500" : "bg-amber-400"}`} />
-              <span>{currentDocument ? "Document Loaded" : "Upload Required"}</span>
+              <span className={`w-2 h-2 rounded-full ${currentDocument ? "bg-emerald-500" : "bg-blue-500"}`} />
+              <span>{currentDocument ? "Document Loaded" : "General Chat Mode"}</span>
             </div>
           </div>
         </header>

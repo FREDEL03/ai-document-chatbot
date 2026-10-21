@@ -140,12 +140,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build prompt with document context
+    // Build prompt with document context or general conversational prompt
     let prompt = trimmed;
     if (docContext) {
       prompt = `Document Name: "${documentName || "Uploaded Document"}"\n\nDocument Content:\n"""\n${docContext}\n"""\n\nUser Question: ${trimmed}\n\nInstructions: Answer the question accurately using ONLY the document content above. If the document does not contain the answer, state clearly that the document does not mention it.`;
     } else if (documentName && typeof documentName === "string") {
       prompt = `The user has uploaded a document named "${documentName}". Please answer based on the content of that document if relevant.\n\nUser question: ${trimmed}`;
+    } else {
+      prompt = `You are DocuChat AI, a helpful, intelligent, and friendly AI assistant. The user hasn't uploaded a document yet, but you can chat with them normally, answer general questions, help brainstorm, or assist them with anything they need. Always be concise, helpful, and polite.\n\nUser: ${trimmed}`;
     }
 
     // Call Gemini with fallback model support
