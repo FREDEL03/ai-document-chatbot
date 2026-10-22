@@ -19,6 +19,14 @@ import {
   Paperclip,
   AlertTriangle,
   RotateCcw,
+  Eye,
+  Download,
+  Copy,
+  Check,
+  Plus,
+  Trash2,
+  MessageSquare,
+  Zap,
 } from "lucide-react";
 import { getSupabaseClient } from "@/src/lib/supabase-client";
 import { LandingPage } from "@/app/components/LandingPage";
@@ -29,6 +37,114 @@ type Message = {
   text: string;
   sender: "user" | "ai";
   timestamp?: string;
+  cached?: boolean;
+};
+
+type UploadedDoc = {
+  id: string;
+  name: string;
+  url?: string | null;
+  size?: number;
+};
+
+type Conversation = {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messages: Message[];
+  documents: UploadedDoc[];
+};
+
+const MAX_DOCS = 5;
+
+const markdownComponents = {
+  h1: ({ children }: any) => (
+    <h1 className="text-base sm:text-lg font-bold text-[#1F1F23] mt-3.5 mb-2 pb-1.5 border-b border-[#E4E2DE] flex items-center gap-1.5 tracking-tight">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }: any) => (
+    <h2 className="text-sm sm:text-base font-bold text-[#1F1F23] mt-3 mb-1.5 flex items-center gap-1.5 tracking-tight">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }: any) => (
+    <h3 className="text-xs sm:text-sm font-semibold text-[#5B6CFF] mt-2.5 mb-1 tracking-wide">
+      {children}
+    </h3>
+  ),
+  p: ({ children }: any) => (
+    <p className="text-[13.5px] sm:text-[14.5px] leading-relaxed text-[#2B2B2E] my-1.5 last:mb-0">
+      {children}
+    </p>
+  ),
+  ul: ({ children }: any) => (
+    <ul className="my-2 space-y-1.5 pl-5 list-disc marker:text-[#5B6CFF] text-[13.5px] sm:text-[14.5px]">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }: any) => (
+    <ol className="my-2 space-y-1.5 pl-5 list-decimal marker:text-[#5B6CFF] marker:font-semibold text-[13.5px] sm:text-[14.5px]">
+      {children}
+    </ol>
+  ),
+  li: ({ children }: any) => (
+    <li className="leading-relaxed text-[#2B2B2E] pl-0.5">
+      {children}
+    </li>
+  ),
+  strong: ({ children }: any) => (
+    <strong className="font-semibold text-[#2435b8] bg-[#5B6CFF]/10 px-1 py-0.5 rounded">
+      {children}
+    </strong>
+  ),
+  blockquote: ({ children }: any) => (
+    <blockquote className="my-2.5 pl-3.5 py-1.5 border-l-3 border-[#5B6CFF] bg-[#F3F2F0]/80 rounded-r-xl text-xs sm:text-[13.5px] text-[#4A4A50] italic">
+      {children}
+    </blockquote>
+  ),
+  table: ({ children }: any) => (
+    <div className="my-3 overflow-x-auto rounded-xl border border-[#E4E2DE] shadow-xs">
+      <table className="min-w-full divide-y divide-[#E4E2DE] text-xs sm:text-[13px]">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: any) => (
+    <thead className="bg-[#F3F2F0] text-[#1F1F23] font-semibold">{children}</thead>
+  ),
+  tbody: ({ children }: any) => (
+    <tbody className="divide-y divide-[#E4E2DE]/60 bg-white">{children}</tbody>
+  ),
+  tr: ({ children }: any) => (
+    <tr className="hover:bg-[#FAFAF9] transition-colors">{children}</tr>
+  ),
+  th: ({ children }: any) => (
+    <th className="px-3.5 py-2.5 text-left font-semibold text-[#1F1F23]">{children}</th>
+  ),
+  td: ({ children }: any) => (
+    <td className="px-3.5 py-2.5 text-[#2B2B2E] leading-normal">{children}</td>
+  ),
+  code: ({ inline, className, children, ...props }: any) => {
+    if (inline) {
+      return (
+        <code className="bg-[#F3F2F0] text-[#5B6CFF] font-mono text-[12px] px-1.5 py-0.5 rounded-md border border-[#E4E2DE]/80 font-medium" {...props}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code className="font-mono text-xs text-[#FAFAF9] leading-relaxed block" {...props}>
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }: any) => (
+    <pre className="my-2.5 p-3.5 rounded-xl bg-[#202024] text-[#FAFAF9] font-mono text-xs overflow-x-auto border border-[#2B2B2E] shadow-xs leading-relaxed">
+      {children}
+    </pre>
+  ),
+  hr: () => <hr className="my-3.5 border-t border-[#E4E2DE]" />,
 };
 
 export default function Home() {
@@ -48,6 +164,9 @@ export default function Home() {
   ]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [documents, setDocuments] = useState<UploadedDoc[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConvoId, setCurrentConvoId] = useState<string>("");
   const [currentDocument, setCurrentDocument] = useState<string | null>(null);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -60,10 +179,12 @@ export default function Home() {
   const [docLoading, setDocLoading] = useState(false);
   const [docUrl, setDocUrl] = useState<string | null>(null);
   const [docText, setDocText] = useState<string | null>(null);
+  const [docModalTab, setDocModalTab] = useState<"visual" | "text">("visual");
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Check active Supabase auth session
+  // Check active Supabase auth session and load user data
   useEffect(() => {
     try {
       const supabase = getSupabaseClient();
@@ -73,15 +194,30 @@ export default function Home() {
         setAuthChecking(false);
         if (u?.id) {
           try {
-            const savedDoc = localStorage.getItem(`docuchat_doc_${u.id}`);
-            const savedDocId = localStorage.getItem(`docuchat_doc_id_${u.id}`);
-            const savedMsgs = localStorage.getItem(`docuchat_msgs_${u.id}`);
-            if (savedDoc) setCurrentDocument(savedDoc);
-            if (savedDocId) setCurrentDocumentId(savedDocId);
-            if (savedMsgs) {
-              const parsed = JSON.parse(savedMsgs);
-              if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
+            // Load conversation history
+            const savedConvos = localStorage.getItem(`docuchat_convos_${u.id}`);
+            if (savedConvos) {
+              const parsed: Conversation[] = JSON.parse(savedConvos);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setConversations(parsed);
+                const latest = parsed[0];
+                setCurrentConvoId(latest.id);
+                setMessages(latest.messages);
+                if (Array.isArray(latest.documents)) {
+                  setDocuments(latest.documents);
+                  if (latest.documents.length > 0) {
+                    setCurrentDocument(latest.documents[0].name);
+                    setCurrentDocumentId(latest.documents[0].id);
+                    setDocUrl(latest.documents[0].url || null);
+                  }
+                }
+                return;
+              }
             }
+
+            // Fallback for first session
+            const newId = Date.now().toString();
+            setCurrentConvoId(newId);
           } catch {}
         }
       });
@@ -92,6 +228,8 @@ export default function Home() {
         if (!u) {
           setCurrentDocument(null);
           setCurrentDocumentId(null);
+          setDocuments([]);
+          setConversations([]);
         }
       });
 
@@ -103,19 +241,45 @@ export default function Home() {
     }
   }, []);
 
-  // Save conversation and active document to localStorage
+  // Save active conversation into conversations history in localStorage
   useEffect(() => {
-    if (!user?.id || authChecking) return;
-    try {
-      localStorage.setItem(`docuchat_msgs_${user.id}`, JSON.stringify(messages));
-      if (currentDocument) {
-        localStorage.setItem(`docuchat_doc_${user.id}`, currentDocument);
+    if (!user?.id || authChecking || !currentConvoId) return;
+
+    const hasUserMsg = messages.some((m) => m.sender === "user");
+    if (!hasUserMsg && messages.length <= 1 && documents.length === 0) return;
+
+    const firstUserMsg = messages.find((m) => m.sender === "user");
+    const title = firstUserMsg
+      ? firstUserMsg.text.slice(0, 36)
+      : documents.length > 0
+      ? `Chat: ${documents[0].name}`
+      : "New Conversation";
+
+    setConversations((prev) => {
+      const existingIdx = prev.findIndex((c) => c.id === currentConvoId);
+      const updatedItem: Conversation = {
+        id: currentConvoId,
+        title,
+        updatedAt: Date.now(),
+        messages,
+        documents,
+      };
+
+      let newConvos: Conversation[];
+      if (existingIdx >= 0) {
+        newConvos = [...prev];
+        newConvos[existingIdx] = updatedItem;
+      } else {
+        newConvos = [updatedItem, ...prev];
       }
-      if (currentDocumentId) {
-        localStorage.setItem(`docuchat_doc_id_${user.id}`, currentDocumentId);
-      }
-    } catch {}
-  }, [messages, currentDocument, currentDocumentId, user?.id, authChecking]);
+
+      newConvos.sort((a, b) => b.updatedAt - a.updatedAt);
+      try {
+        localStorage.setItem(`docuchat_convos_${user.id}`, JSON.stringify(newConvos));
+      } catch {}
+      return newConvos;
+    });
+  }, [messages, documents, currentConvoId, user?.id, authChecking]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -152,6 +316,8 @@ export default function Home() {
           message: textToSend,
           document: currentDocument,
           documentId: currentDocumentId,
+          documentIds: documents.map((d) => d.id),
+          documents: documents.map((d) => ({ id: d.id, name: d.name })),
           userId: user?.id,
         }),
       });
@@ -169,29 +335,38 @@ export default function Home() {
       }
 
       const fullText = data.answer || "";
+      const isCached = !!data.cached;
       const aiId = Date.now() + 1;
       setLoading(false);
-      setMessages((prev) => [
-        ...prev,
-        { id: aiId, text: "", sender: "ai", timestamp: timeString },
-      ]);
 
-      let i = 0;
-      const chunkSize = Math.max(1, Math.floor(fullText.length / 80));
-      const timer = setInterval(() => {
-        i += chunkSize;
-        if (i >= fullText.length) {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === aiId ? { ...m, text: fullText } : m))
-          );
-          clearInterval(timer);
-        } else {
-          const displayed = fullText.slice(0, i);
-          setMessages((prev) =>
-            prev.map((m) => (m.id === aiId ? { ...m, text: displayed } : m))
-          );
-        }
-      }, 16);
+      if (isCached) {
+        setMessages((prev) => [
+          ...prev,
+          { id: aiId, text: fullText, sender: "ai", timestamp: timeString, cached: true },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { id: aiId, text: "", sender: "ai", timestamp: timeString, cached: false },
+        ]);
+
+        let i = 0;
+        const chunkSize = Math.max(1, Math.floor(fullText.length / 80));
+        const timer = setInterval(() => {
+          i += chunkSize;
+          if (i >= fullText.length) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === aiId ? { ...m, text: fullText } : m))
+            );
+            clearInterval(timer);
+          } else {
+            const displayed = fullText.slice(0, i);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === aiId ? { ...m, text: displayed } : m))
+            );
+          }
+        }, 16);
+      }
     } catch (error: any) {
       console.error("Chat error:", error);
       toast.error(error?.message || "Failed to process chat");
@@ -209,84 +384,106 @@ export default function Home() {
     }
   };
 
-  const uploadFile = async (file: File) => {
-    if (file.size > 4.5 * 1024 * 1024) {
-      toast.error("File size must be under 4.5 MB.");
+  const uploadFiles = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+
+    if (documents.length >= MAX_DOCS) {
+      toast.error(`Maximum of ${MAX_DOCS} documents reached. Please clear a file first.`);
       return;
     }
 
-    setUploading(true);
-    const toastId = toast.loading(`Uploading and indexing "${file.name}"...`);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (user?.id) {
-        formData.append("userId", user.id);
-      }
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const raw = await response.text();
-      let data: any = {};
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        throw new Error(
-          `Server error (${response.status}): ${raw.slice(0, 120) || "Empty response from server"}`
-        );
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || "Upload failed");
-      }
-
-      setCurrentDocument(file.name);
-      setCurrentDocumentId(data.documentId || null);
-
-      toast.success(`"${file.name}" ready for chat!`, { id: toastId });
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          text: `📄 Document **"${file.name}"** uploaded & processed successfully! You can now ask questions about it below.`,
-          sender: "ai",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-      setSidebarOpen(false);
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      toast.error(error?.message || "Failed to upload document", { id: toastId });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          text: `❌ ${error?.message || "Failed to upload document. Please try again."}`,
-          sender: "ai",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-    } finally {
-      setUploading(false);
+    const availableSlots = MAX_DOCS - documents.length;
+    const filesToUpload = files.slice(0, availableSlots);
+    if (files.length > availableSlots) {
+      toast.warning(`Only uploading ${availableSlots} file(s) to respect the ${MAX_DOCS} document limit.`);
     }
+
+    setUploading(true);
+    let successCount = 0;
+
+    for (const file of filesToUpload) {
+      if (file.size > 4.5 * 1024 * 1024) {
+        toast.error(`"${file.name}" exceeds 4.5 MB limit.`);
+        continue;
+      }
+
+      const toastId = toast.loading(`Uploading "${file.name}"...`);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (user?.id) formData.append("userId", user.id);
+
+        const localBlob = URL.createObjectURL(file);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const raw = await response.text();
+        let data: any = {};
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error("Invalid response from server");
+        }
+
+        if (!response.ok) throw new Error(data.error || "Upload failed");
+
+        const newDoc: UploadedDoc = {
+          id: data.documentId || `${Date.now()}_${file.name}`,
+          name: file.name,
+          url: data.signedUrl || localBlob,
+          size: file.size,
+        };
+
+        setDocuments((prev) => {
+          const exists = prev.some((d) => d.id === newDoc.id || d.name === newDoc.name);
+          return exists ? prev : [...prev, newDoc];
+        });
+
+        setCurrentDocument(file.name);
+        setCurrentDocumentId(newDoc.id);
+        setDocUrl(newDoc.url || localBlob);
+
+        toast.success(`"${file.name}" ready for chat!`, { id: toastId });
+        successCount++;
+      } catch (err: any) {
+        toast.error(`Failed to upload "${file.name}": ${err?.message || "Error"}`, { id: toastId });
+      }
+    }
+
+    if (successCount > 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          text: `📄 ${successCount === 1 ? "Document" : `${successCount} documents`} indexed successfully! You can now ask questions about your documents.`,
+          sender: "ai",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    }
+
+    setUploading(false);
+    setSidebarOpen(false);
   };
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      uploadFile(acceptedFiles[0]);
-    }
-  }, [user?.id]);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        uploadFiles(acceptedFiles);
+      }
+    },
+    [documents, user?.id]
+  );
 
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     onDrop,
     noClick: true,
     noKeyboard: true,
-    multiple: false,
+    multiple: true,
+    maxFiles: MAX_DOCS,
     accept: {
       "application/pdf": [".pdf"],
       "text/plain": [".txt"],
@@ -295,13 +492,90 @@ export default function Home() {
     },
   });
 
+  const handleNewChat = () => {
+    const newId = Date.now().toString();
+    setCurrentConvoId(newId);
+    setMessages([
+      {
+        id: Date.now(),
+        text: "👋 New conversation started. Ask questions about your documents or chat freely!",
+        sender: "ai",
+        timestamp: "Just now",
+      },
+    ]);
+    toast.success("New chat started");
+    setSidebarOpen(false);
+  };
+
+  const handleSelectConversation = (convo: Conversation) => {
+    setCurrentConvoId(convo.id);
+    setMessages(convo.messages);
+    if (Array.isArray(convo.documents)) {
+      setDocuments(convo.documents);
+      if (convo.documents.length > 0) {
+        setCurrentDocument(convo.documents[0].name);
+        setCurrentDocumentId(convo.documents[0].id);
+        setDocUrl(convo.documents[0].url || null);
+      } else {
+        setCurrentDocument(null);
+        setCurrentDocumentId(null);
+        setDocUrl(null);
+      }
+    }
+    setSidebarOpen(false);
+    toast.info(`Switched to "${convo.title}"`);
+  };
+
+  const handleDeleteConversation = (convoId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConversations((prev) => {
+      const updated = prev.filter((c) => c.id !== convoId);
+      if (user?.id) {
+        try {
+          localStorage.setItem(`docuchat_convos_${user.id}`, JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    if (currentConvoId === convoId) {
+      handleNewChat();
+    }
+    toast.info("Conversation deleted");
+  };
+
+  const handleRemoveDocument = (docId: string, docName: string) => {
+    setDocuments((prev) => {
+      const filtered = prev.filter((d) => d.id !== docId && d.name !== docName);
+      if (filtered.length === 0) {
+        setCurrentDocument(null);
+        setCurrentDocumentId(null);
+        setDocUrl(null);
+      } else if (currentDocument === docName || currentDocumentId === docId) {
+        setCurrentDocument(filtered[0].name);
+        setCurrentDocumentId(filtered[0].id);
+        setDocUrl(filtered[0].url || null);
+      }
+      return filtered;
+    });
+    toast.info(`Removed "${docName}"`);
+  };
+
+  const handleClearAllDocuments = () => {
+    setDocuments([]);
+    setCurrentDocument(null);
+    setCurrentDocumentId(null);
+    setDocUrl(null);
+    toast.info("All documents cleared. General chat mode active.");
+  };
+
   const handleClearChat = () => {
     setMessages([
       {
         id: Date.now(),
-        text: currentDocument
-          ? `Chat cleared. Ready for your questions about **"${currentDocument}"**.`
-          : "Chat cleared. Please upload a document to get started.",
+        text: documents.length > 0
+          ? `Chat cleared. Ready for your questions about your ${documents.length} document(s).`
+          : "Chat cleared. General chat mode active.",
         sender: "ai",
         timestamp: "Just now",
       },
@@ -315,6 +589,7 @@ export default function Home() {
     try {
       if (user?.id) {
         try {
+          localStorage.removeItem(`docuchat_convos_${user.id}`);
           localStorage.removeItem(`docuchat_msgs_${user.id}`);
           localStorage.removeItem(`docuchat_doc_${user.id}`);
           localStorage.removeItem(`docuchat_doc_id_${user.id}`);
@@ -325,6 +600,8 @@ export default function Home() {
       setUser(null);
       setCurrentDocument(null);
       setCurrentDocumentId(null);
+      setDocuments([]);
+      setConversations([]);
       setShowSignOutConfirm(false);
       toast.success("Signed out successfully");
     } finally {
@@ -332,33 +609,62 @@ export default function Home() {
     }
   };
 
-  const handleViewDocument = async () => {
-    if (!currentDocument && !currentDocumentId) return;
+  const handleViewDocument = async (docToView?: UploadedDoc) => {
+    const targetName = docToView ? docToView.name : currentDocument;
+    const targetId = docToView ? docToView.id : currentDocumentId;
+    if (!targetName && !targetId) return;
+
+    if (docToView) {
+      setCurrentDocument(docToView.name);
+      setCurrentDocumentId(docToView.id);
+      if (docToView.url) setDocUrl(docToView.url);
+    }
+
     setShowDocModal(true);
-    setDocLoading(true);
-    setDocUrl(null);
-    setDocText(null);
+    setDocModalTab("visual");
+
+    if (!docUrl && !docToView?.url) {
+      setDocLoading(true);
+    }
+
     try {
-      const supabase = getSupabaseClient();
-      let query = supabase.from("documents").select("storage_path, extracted_text, id");
-      if (currentDocumentId) {
-        query = query.eq("id", currentDocumentId);
-      } else if (currentDocument) {
-        query = query.eq("original_name", currentDocument);
-        if (user?.id) query = query.eq("user_id", user.id);
-      }
-      const { data } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (data?.storage_path) {
-        const { data: urlData, error: urlError } = await supabase.storage.from("documents").createSignedUrl(data.storage_path, 3600);
-        if (!urlError && urlData?.signedUrl) {
-          setDocUrl(urlData.signedUrl);
-        } else {
-          setDocUrl(null);
+      const params = new URLSearchParams();
+      if (targetId) params.set("id", targetId);
+      if (targetName) params.set("name", targetName);
+      if (user?.id) params.set("userId", user.id);
+
+      const res = await fetch(`/api/document?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.signedUrl) {
+          setDocUrl(data.signedUrl);
+          setDocuments((prev) =>
+            prev.map((d) =>
+              d.name === targetName || d.id === targetId ? { ...d, url: data.signedUrl } : d
+            )
+          );
         }
+        if (data.extractedText) {
+          setDocText(data.extractedText);
+        }
+      } else {
+        const supabase = getSupabaseClient();
+        let query = supabase.from("documents").select("storage_path, extracted_text, id");
+        if (targetId) {
+          query = query.eq("id", targetId);
+        } else if (targetName) {
+          query = query.eq("original_name", targetName);
+          if (user?.id) query = query.eq("user_id", user.id);
+        }
+        const { data } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (data?.storage_path) {
+          const { data: urlData } = await supabase.storage.from("documents").createSignedUrl(data.storage_path, 3600);
+          if (urlData?.signedUrl) setDocUrl(urlData.signedUrl);
+        }
+        if (data?.extracted_text) setDocText(data.extracted_text);
       }
-      setDocText(data?.extracted_text || null);
-    } catch {
-      setDocText("Failed to load document content.");
+    } catch (err) {
+      console.error("Document preview fetch error:", err);
       toast.error("Failed to load document content");
     } finally {
       setDocLoading(false);
@@ -459,100 +765,185 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Upload Action */}
-        <div className="p-4 space-y-3">
+        {/* Action Buttons: New Chat & Upload */}
+        <div className="p-3.5 space-y-2 border-b border-[#E4E2DE] bg-white/40">
+          <button
+            onClick={handleNewChat}
+            className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-[#FAFAF9] text-[#2B2B2E] border border-[#E4E2DE] hover:border-[#5B6CFF]/40 font-semibold text-xs shadow-xs transition-all flex items-center justify-between cursor-pointer group"
+          >
+            <span className="flex items-center gap-2">
+              <Plus className="w-4 h-4 text-[#5B6CFF] group-hover:rotate-90 transition-transform duration-200" />
+              <span>New Chat</span>
+            </span>
+            <span className="text-[10px] bg-[#F3F2F0] text-[#6B6B73] px-1.5 py-0.5 rounded font-mono">Clean</span>
+          </button>
+
           <button
             onClick={openFileDialog}
-            disabled={uploading}
-            className="w-full py-3 px-4 rounded-xl bg-[#5B6CFF] hover:bg-[#4a5be8] text-white font-semibold shadow-md shadow-[#5B6CFF]/25 active:scale-[0.98] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            disabled={uploading || documents.length >= MAX_DOCS}
+            className="w-full py-2.5 px-3 rounded-xl bg-[#5B6CFF] hover:bg-[#4a5be8] text-white font-semibold text-xs shadow-md shadow-[#5B6CFF]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {uploading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Processing...</span>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Uploading files...</span>
               </>
             ) : (
               <>
-                <Upload className="w-5 h-5" />
-                <span>Upload Document</span>
+                <Upload className="w-3.5 h-3.5" />
+                <span>
+                  {documents.length >= MAX_DOCS
+                    ? `Max Docs Limit (${MAX_DOCS}/${MAX_DOCS})`
+                    : `Upload Files (${documents.length}/${MAX_DOCS})`}
+                </span>
               </>
             )}
           </button>
-
-          <p className="text-[11px] text-[#6B6B73] text-center">
-            Supports PDF, TXT, DOC, DOCX up to 4.5MB
+          <p className="text-[10px] text-[#6B6B73] text-center">
+            PDF, TXT, DOC, DOCX • max {MAX_DOCS} files (4.5MB ea)
           </p>
         </div>
 
-        {/* Active Document Section */}
-        <div className="flex-1 px-4 py-2 overflow-y-auto">
-          <div className="text-xs font-semibold uppercase tracking-wider text-[#6B6B73] mb-2 px-1">
-            Current Document
+        {/* Scrollable Middle: Documents & Chat History */}
+        <div className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
+          {/* Section: Uploaded Documents */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B6B73]">
+                Uploaded Files ({documents.length}/{MAX_DOCS})
+              </span>
+              {documents.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllDocuments}
+                  className="text-[10px] text-red-600 hover:text-red-700 hover:underline font-semibold cursor-pointer"
+                  title="Clear all uploaded documents"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            {documents.length > 0 ? (
+              <div className="space-y-1.5">
+                {documents.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="p-2.5 rounded-xl bg-white border border-[#E4E2DE] shadow-xs flex items-center justify-between gap-2 hover:border-[#5B6CFF]/30 transition-all group"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="w-7 h-7 rounded-lg bg-[#5B6CFF]/10 text-[#5B6CFF] flex items-center justify-center shrink-0">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-[#2B2B2E] truncate" title={doc.name}>
+                          {doc.name}
+                        </p>
+                        <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Ready
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleViewDocument(doc)}
+                        className="p-1 text-[#5B6CFF] hover:bg-[#5B6CFF]/10 rounded-md transition-colors cursor-pointer"
+                        title="View document preview"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDocument(doc.id, doc.name)}
+                        className="p-1 text-[#6B6B73] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                        title="Remove this document"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                onClick={openFileDialog}
+                className="p-3 rounded-xl border border-dashed border-[#E4E2DE] text-center space-y-1 bg-white/60 hover:bg-white hover:border-[#5B6CFF]/40 transition-all cursor-pointer"
+              >
+                <div className="w-7 h-7 mx-auto rounded-full bg-[#F3F2F0] flex items-center justify-center text-[#6B6B73]">
+                  <FileText className="w-3.5 h-3.5" />
+                </div>
+                <p className="text-xs font-medium text-[#2B2B2E]">No files attached</p>
+                <p className="text-[10px] text-[#6B6B73]">General chat mode. Click to attach up to {MAX_DOCS} files.</p>
+              </div>
+            )}
           </div>
 
-          {currentDocument ? (
-            <div className="p-3.5 rounded-xl bg-white border border-[#E4E2DE] shadow-xs space-y-2">
-              <div className="flex items-start gap-2.5">
-                <div className="p-2 rounded-lg bg-[#5B6CFF]/10 text-[#5B6CFF] mt-0.5">
-                  <FileCheck2 className="w-5 h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#2B2B2E] truncate" title={currentDocument}>
-                    {currentDocument}
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-medium">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Indexed & Ready
-                  </span>
-                </div>
-              </div>
+          {/* Section: Chat History */}
+          <div className="space-y-2 pt-2 border-t border-[#E4E2DE]">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B6B73]">
+                Chat History ({conversations.length})
+              </span>
+            </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={handleViewDocument}
-                  className="text-xs text-[#5B6CFF] hover:underline flex items-center gap-1 cursor-pointer font-medium"
-                >
-                  <span>View content</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-                <span className="text-[#E4E2DE] text-xs">•</span>
-                <button
-                  onClick={openFileDialog}
-                  className="text-xs text-[#6B6B73] hover:text-[#2B2B2E] hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <span>Switch</span>
-                  <span>→</span>
-                </button>
+            {conversations.length === 0 ? (
+              <div className="px-2 py-3 text-center text-[11px] text-[#6B6B73] bg-white/40 rounded-xl border border-dashed border-[#E4E2DE]">
+                No previous conversations
               </div>
-            </div>
-          ) : (
-            <div
-              onClick={openFileDialog}
-              className="p-4 rounded-xl border border-dashed border-[#E4E2DE] text-center space-y-2 bg-white/60 hover:bg-white hover:border-[#5B6CFF]/40 transition-all cursor-pointer"
-            >
-              <div className="w-8 h-8 mx-auto rounded-full bg-[#F3F2F0] flex items-center justify-center text-[#6B6B73]">
-                <FileText className="w-4 h-4" />
+            ) : (
+              <div className="space-y-1">
+                {conversations.map((convo) => (
+                  <div
+                    key={convo.id}
+                    onClick={() => handleSelectConversation(convo)}
+                    className={`w-full p-2.5 rounded-xl text-left text-xs transition-all flex items-center justify-between gap-2 cursor-pointer group ${
+                      currentConvoId === convo.id
+                        ? "bg-white border border-[#5B6CFF]/30 text-[#2B2B2E] shadow-xs font-semibold"
+                        : "hover:bg-white/70 text-[#6B6B73] hover:text-[#2B2B2E]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <MessageSquare
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          currentConvoId === convo.id ? "text-[#5B6CFF]" : "text-[#6B6B73]"
+                        }`}
+                      />
+                      <span className="truncate">{convo.title || "Conversation"}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteConversation(convo.id, e)}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-[#6B6B73] hover:text-red-600 rounded-md hover:bg-red-50 transition-all cursor-pointer shrink-0"
+                      title="Delete conversation"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
-              <p className="text-xs text-[#6B6B73]">Click or drag file to upload</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-[#E4E2DE] space-y-2 bg-white/50">
+        <div className="p-3.5 border-t border-[#E4E2DE] space-y-1.5 bg-white/50">
           <button
             onClick={() => setShowClearConfirm(true)}
             className="w-full py-2 px-3 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
-            <RotateCcw className="w-4 h-4" />
-            Clear Conversation
+            <RotateCcw className="w-3.5 h-3.5" />
+            Clear Current Messages
           </button>
 
           <button
             onClick={() => setShowSignOutConfirm(true)}
             className="w-full py-2 px-3 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
             Sign Out
           </button>
         </div>
@@ -573,26 +964,32 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-semibold text-[#2B2B2E] text-sm sm:text-base">Document Assistant</h2>
-                {currentDocument && (
+                {documents.length > 0 ? (
                   <button
-                    onClick={handleViewDocument}
-                    title="Click to view document"
-                    className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#5B6CFF]/10 text-[#5B6CFF] border border-[#5B6CFF]/20 max-w-[220px] truncate transition-colors cursor-pointer"
+                    onClick={() => handleViewDocument()}
+                    title="Click to view active document preview"
+                    className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#5B6CFF]/10 text-[#5B6CFF] border border-[#5B6CFF]/20 max-w-[240px] truncate transition-colors cursor-pointer hover:bg-[#5B6CFF]/15"
                   >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span className="truncate">{currentDocument}</span>
-                    <ExternalLink className="w-2.5 h-2.5" />
+                    <FileText className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{currentDocument || `${documents.length} documents`}</span>
+                    <ExternalLink className="w-2.5 h-2.5 shrink-0" />
                   </button>
-                )}
+                ) : null}
               </div>
               <p className="text-xs text-[#6B6B73]">RAG Semantic Search & Q&A</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E4E2DE] text-xs font-medium text-[#2B2B2E] shadow-xs">
-              <span className={`w-2 h-2 rounded-full ${currentDocument ? "bg-emerald-500" : "bg-blue-500"}`} />
-              <span>{currentDocument ? "Document Loaded" : "General Chat Mode"}</span>
+              <span className={`w-2 h-2 rounded-full ${documents.length > 0 ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`} />
+              <span>
+                {documents.length === 1
+                  ? "1 Document Active"
+                  : documents.length > 1
+                  ? `${documents.length} Documents Active`
+                  : "General Chat Mode"}
+              </span>
             </div>
           </div>
         </header>
@@ -616,13 +1013,13 @@ export default function Home() {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex items-start gap-3 ${
+                  className={`flex items-start gap-2.5 sm:gap-3 ${
                     msg.sender === "user" ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
                   {/* Avatar */}
                   <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold mt-0.5 ${
                       msg.sender === "user"
                         ? "bg-[#5B6CFF] text-white shadow-sm"
                         : "bg-white text-[#5B6CFF] border border-[#E4E2DE] shadow-xs"
@@ -632,34 +1029,70 @@ export default function Home() {
                   </div>
 
                   {/* Message Bubble */}
-                  <div
-                    className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 shadow-xs space-y-1 ${
-                      msg.sender === "user"
-                        ? "bg-[#E8EAFF] text-[#2B2B2E] border border-[#5B6CFF]/25 rounded-tr-xs font-medium"
-                        : "bg-white border border-[#E4E2DE] text-[#2B2B2E] rounded-tl-xs"
-                    }`}
-                  >
-                    {msg.sender === "user" ? (
-                      <p className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap">
+                  {msg.sender === "user" ? (
+                    <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-xs px-4 py-2.5 shadow-xs bg-[#5B6CFF] text-white">
+                      <p className="text-sm sm:text-[14.5px] leading-relaxed whitespace-pre-wrap font-normal">
                         {msg.text}
                       </p>
-                    ) : (
-                      <div className="text-sm sm:text-[15px] leading-relaxed space-y-2 prose max-w-none prose-p:leading-relaxed prose-pre:bg-[#F3F2F0] prose-pre:border prose-pre:border-[#E4E2DE] prose-pre:text-[#2B2B2E]">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.timestamp && (
+                        <div className="text-[10px] text-right font-medium text-white/80 pt-1">
+                          {msg.timestamp}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="max-w-[92%] sm:max-w-[85%] bg-white border border-[#E4E2DE] rounded-2xl rounded-tl-xs p-4 sm:p-5 shadow-xs space-y-2 text-[#2B2B2E]">
+                      {/* AI Header Bar */}
+                      <div className="flex items-center justify-between pb-2 border-b border-[#E4E2DE]/70 text-xs">
+                        <div className="flex items-center gap-2 text-[11px] font-semibold text-[#5B6CFF]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#5B6CFF]" />
+                          <span>DocuChat AI</span>
+                          {msg.cached && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-700 border border-amber-500/25">
+                              <Zap className="w-2.5 h-2.5 fill-amber-500 text-amber-600" />
+                              Cached
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(msg.text);
+                            setCopiedId(msg.id);
+                            toast.success("Response copied to clipboard");
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-[#F3F2F0] text-[11px] text-[#6B6B73] hover:text-[#2B2B2E] transition-colors cursor-pointer"
+                          title="Copy response"
+                        >
+                          {copiedId === msg.id ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span className="text-emerald-600 font-medium">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Rendered AI Markdown Content */}
+                      <div className="text-sm leading-relaxed overflow-hidden">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {msg.text}
                         </ReactMarkdown>
                       </div>
-                    )}
-                    {msg.timestamp && (
-                      <div
-                        className={`text-[10px] text-right font-medium pt-1 ${
-                          msg.sender === "user" ? "text-[#5B6CFF]" : "text-[#6B6B73]"
-                        }`}
-                      >
-                        {msg.timestamp}
-                      </div>
-                    )}
-                  </div>
+
+                      {msg.timestamp && (
+                        <div className="text-[10px] text-right font-medium text-[#6B6B73] pt-1 border-t border-[#E4E2DE]/40">
+                          {msg.timestamp}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
 
@@ -685,7 +1118,7 @@ export default function Home() {
         </div>
 
         {/* Suggestion Chips */}
-        {currentDocument && messages.length <= 3 && !loading && (
+        {documents.length > 0 && messages.length <= 3 && !loading && (
           <div className="px-4 sm:px-6 max-w-3xl mx-auto w-full pb-2">
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               <span className="text-xs text-[#6B6B73] shrink-0">Try asking:</span>
@@ -709,9 +1142,9 @@ export default function Home() {
               <button
                 type="button"
                 onClick={openFileDialog}
-                disabled={uploading}
-                title="Upload document"
-                className="p-2.5 text-[#6B6B73] hover:text-[#5B6CFF] hover:bg-white rounded-xl transition-colors cursor-pointer shrink-0"
+                disabled={uploading || documents.length >= MAX_DOCS}
+                title={documents.length >= MAX_DOCS ? `Limit reached (${MAX_DOCS}/${MAX_DOCS})` : "Attach document"}
+                className="p-2.5 text-[#6B6B73] hover:text-[#5B6CFF] hover:bg-white rounded-xl transition-colors cursor-pointer shrink-0 disabled:opacity-40"
               >
                 <Paperclip className="w-5 h-5" />
               </button>
@@ -721,9 +1154,11 @@ export default function Home() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={
-                  currentDocument
-                    ? `Ask anything about "${currentDocument}"...`
-                    : "Upload a document (PDF, TXT, DOC, DOCX) to start..."
+                  documents.length === 1
+                    ? `Ask anything about "${documents[0].name}"...`
+                    : documents.length > 1
+                    ? `Ask across your ${documents.length} attached documents...`
+                    : "Message DocuChat AI or upload a document to get started..."
                 }
                 disabled={loading}
                 className="flex-1 bg-transparent px-3 py-2 text-sm sm:text-base text-[#2B2B2E] placeholder-[#6B6B73] focus:outline-none disabled:opacity-60"
@@ -823,30 +1258,90 @@ export default function Home() {
       {/* View Uploaded Document Modal */}
       {showDocModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#2B2B2E]/40 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="w-full max-w-4xl h-[90vh] bg-white border border-[#E4E2DE] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#E4E2DE] shrink-0">
+          <div className="w-full max-w-5xl h-[92vh] bg-white border border-[#E4E2DE] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-[#E4E2DE] shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-[#5B6CFF]/10 text-[#5B6CFF] flex items-center justify-center shrink-0 border border-[#5B6CFF]/20">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm sm:text-base font-semibold text-[#2B2B2E] truncate" title={currentDocument || "Document"}>
-                    {currentDocument || "Uploaded Document"}
-                  </h3>
-                  <p className="text-[11px] text-[#6B6B73]">Full visual document viewer</p>
+                  {documents.length > 1 ? (
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={currentDocument || ""}
+                        onChange={(e) => {
+                          const selected = documents.find((d) => d.name === e.target.value);
+                          if (selected) handleViewDocument(selected);
+                        }}
+                        className="text-xs sm:text-sm font-semibold text-[#2B2B2E] bg-[#F3F2F0] hover:bg-[#E4E2DE] border border-[#E4E2DE] rounded-xl px-2.5 py-1 cursor-pointer focus:outline-none max-w-[260px] truncate"
+                      >
+                        {documents.map((d) => (
+                          <option key={d.id} value={d.name}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <h3 className="text-sm sm:text-base font-semibold text-[#2B2B2E] truncate" title={currentDocument || "Document"}>
+                      {currentDocument || "Uploaded Document"}
+                    </h3>
+                  )}
+                  <p className="text-[11px] text-[#6B6B73]">Visual document viewer</p>
                 </div>
               </div>
+
+              {/* View Toggle Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-[#F3F2F0] rounded-xl border border-[#E4E2DE]">
+                <button
+                  type="button"
+                  onClick={() => setDocModalTab("visual")}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    docModalTab === "visual"
+                      ? "bg-white text-[#2B2B2E] shadow-xs"
+                      : "text-[#6B6B73] hover:text-[#2B2B2E]"
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Visual View</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDocModalTab("text")}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    docModalTab === "text"
+                      ? "bg-white text-[#2B2B2E] shadow-xs"
+                      : "text-[#6B6B73] hover:text-[#2B2B2E]"
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Extracted Text</span>
+                </button>
+              </div>
+
               <div className="flex items-center gap-2 shrink-0">
                 {docUrl && (
-                  <a
-                    href={docUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3F2F0] hover:bg-[#E4E2DE] text-xs font-medium text-[#2B2B2E] transition-colors"
-                  >
-                    <span>Open in new tab</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+                  <>
+                    <a
+                      href={docUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3F2F0] hover:bg-[#E4E2DE] text-xs font-medium text-[#2B2B2E] transition-colors"
+                      title="Open in new tab"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open</span>
+                    </a>
+                    <a
+                      href={docUrl}
+                      download={currentDocument || "document"}
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3F2F0] hover:bg-[#E4E2DE] text-xs font-medium text-[#2B2B2E] transition-colors"
+                      title="Download file"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </a>
+                  </>
                 )}
                 <button
                   onClick={() => setShowDocModal(false)}
@@ -860,25 +1355,75 @@ export default function Home() {
             <div className="flex-1 my-3 overflow-hidden rounded-2xl bg-[#FAFAF9] border border-[#E4E2DE] flex flex-col">
               {docLoading ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#6B6B73]">
-                  <Loader2 className="w-6 h-6 text-[#5B6CFF] animate-spin" />
-                  <span className="font-sans text-xs font-medium">Loading document preview...</span>
+                  <Loader2 className="w-7 h-7 text-[#5B6CFF] animate-spin" />
+                  <span className="font-sans text-xs font-medium">Loading document viewer...</span>
                 </div>
-              ) : docUrl && currentDocument?.toLowerCase().endsWith(".pdf") ? (
-                <iframe
-                  src={`${docUrl}#toolbar=1`}
-                  className="w-full h-full rounded-2xl border-0"
-                  title="PDF Preview"
-                />
-              ) : docUrl && (currentDocument?.toLowerCase().endsWith(".png") || currentDocument?.toLowerCase().endsWith(".jpg")) ? (
-                <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-                  <img src={docUrl} alt="Document" className="max-w-full max-h-full rounded-lg object-contain" />
-                </div>
+              ) : docModalTab === "visual" ? (
+                currentDocument?.toLowerCase().endsWith(".pdf") ? (
+                  docUrl ? (
+                    <object
+                      data={`${docUrl}#toolbar=1&navpanes=0`}
+                      type="application/pdf"
+                      className="w-full h-full rounded-2xl"
+                    >
+                      <iframe
+                        src={`${docUrl}#toolbar=1`}
+                        className="w-full h-full rounded-2xl border-0"
+                        title="PDF Visual Preview"
+                      />
+                    </object>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[#6B6B73] gap-3">
+                      <AlertTriangle className="w-8 h-8 text-amber-500" />
+                      <div>
+                        <p className="text-sm font-semibold text-[#2B2B2E]">Unable to generate visual PDF link</p>
+                        <p className="text-xs text-[#6B6B73] mt-1">Please try re-opening or check the extracted text tab.</p>
+                      </div>
+                      <button
+                        onClick={() => handleViewDocument()}
+                        className="px-3 py-1.5 rounded-xl bg-[#5B6CFF] text-white text-xs font-medium hover:bg-[#4a5be8] cursor-pointer"
+                      >
+                        Retry Loading PDF
+                      </button>
+                    </div>
+                  )
+                ) : docUrl && (currentDocument?.toLowerCase().endsWith(".png") || currentDocument?.toLowerCase().endsWith(".jpg") || currentDocument?.toLowerCase().endsWith(".jpeg")) ? (
+                  <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
+                    <img src={docUrl} alt="Document" className="max-w-full max-h-full rounded-lg object-contain shadow-sm" />
+                  </div>
+                ) : currentDocument?.toLowerCase().endsWith(".txt") ? (
+                  <div className="flex-1 overflow-y-auto p-5 text-[#2B2B2E] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text bg-white">
+                    {docText || "No content found in this text file."}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-[#5B6CFF]/10 text-[#5B6CFF] flex items-center justify-center">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#2B2B2E]">{currentDocument}</p>
+                      <p className="text-xs text-[#6B6B73] max-w-sm mt-1">
+                        Direct visual preview for Word/DOCX is best viewed downloaded or via Extracted Text tab below.
+                      </p>
+                    </div>
+                    {docUrl && (
+                      <a
+                        href={docUrl}
+                        download={currentDocument || "document"}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#5B6CFF] hover:bg-[#4a5be8] text-white text-xs font-medium transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download Original File</span>
+                      </a>
+                    )}
+                  </div>
+                )
               ) : (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  <div className="p-3 bg-amber-50 border-b border-amber-200 text-[11px] text-amber-800 flex items-center justify-between">
-                    <span>💡 Showing extracted text representation:</span>
+                  <div className="p-3 bg-amber-50/80 border-b border-amber-200/60 text-[11px] text-amber-800 flex items-center justify-between">
+                    <span>Parsed text representation used by AI indexing:</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-[#2B2B2E] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-[#2B2B2E] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text bg-white">
                     {docText || "No text available for this document."}
                   </div>
                 </div>

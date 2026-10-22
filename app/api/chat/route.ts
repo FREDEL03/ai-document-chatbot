@@ -4,6 +4,23 @@ import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 
 export const maxDuration = 30;
 
+interface CacheEntry {
+  answer: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+// Global in-memory cache for repeated questions (key: userId + docIds + normalized question)
+const qaCache = new Map<string, CacheEntry>();
+const MAX_CACHE_SIZE = 1000;
+const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+
+function buildCacheKey(question: string, docIdentifiers: string[], userId?: string | null): string {
+  const normQ = question.toLowerCase().trim().replace(/\s+/g, " ");
+  const sortedDocs = [...docIdentifiers].sort().join("|");
+  return `${userId || "global"}::${sortedDocs}::${normQ}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Parse request body first
@@ -17,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, document: documentName, documentId, userId } = body;
+    const { message, document: documentName, documentId, documentIds, documents: docsPayload, userId } = body;
     if (typeof message !== "string") {
       return NextResponse.json(
         { error: "Field 'message' must be a string" },
@@ -94,46 +111,91 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Retrieve document content from Supabase if document is selected
+    // Collect all target documents (supports multiple files up to 5)
+    const docItems: Array<{ id?: string; name?: string }> = [];
+    if (Array.isArray(docsPayload) && docsPayload.length > 0) {
+      docsPayload.forEach((d: any) => {
+        if (d && (d.id || d.name)) docItems.push({ id: d.id, name: d.name });
+      });
+    } else if (Array.isArray(documentIds) && documentIds.length > 0) {
+      documentIds.forEach((id: string) => {
+        if (id) docItems.push({ id });
+      });
+    } else if (documentId || documentName) {
+      docItems.push({ id: documentId, name: documentName });
+    }
+
+    // Check in-memory Q&A cache before document retrieval or AI generation
+    const docIdentifiers = docItems.map((d) => d.id || d.name || "").filter(Boolean);
+    const cacheKey = buildCacheKey(trimmed, docIdentifiers, userId);
+
+    const cached = qaCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return NextResponse.json({ answer: cached.answer, cached: true });
+    }
+
+    // Retrieve document content from Supabase for all selected documents
     let docContext = "";
-    if (documentId || documentName) {
+    if (docItems.length > 0) {
       try {
         const supabaseAdmin = getSupabaseAdmin();
-        let targetId = documentId;
+        const docContextParts: string[] = [];
 
-        if (!targetId && documentName) {
-          let query = supabaseAdmin
-            .from("documents")
-            .select("id")
-            .eq("original_name", documentName);
-          if (userId) {
-            query = query.eq("user_id", userId);
+        for (const item of docItems.slice(0, 5)) {
+          let targetId = item.id;
+          let docTitle = item.name || "Document";
+
+          if (!targetId && item.name) {
+            let query = supabaseAdmin
+              .from("documents")
+              .select("id, original_name")
+              .eq("original_name", item.name);
+            if (userId) query = query.eq("user_id", userId);
+            const { data: found } = await query
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            targetId = found?.id;
+            if (found?.original_name) docTitle = found.original_name;
           }
-          const { data: doc } = await query
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          targetId = doc?.id;
+
+          if (targetId) {
+            if (!item.name) {
+              const { data: meta } = await supabaseAdmin
+                .from("documents")
+                .select("original_name")
+                .eq("id", targetId)
+                .maybeSingle();
+              if (meta?.original_name) docTitle = meta.original_name;
+            }
+
+            const { data: chunks } = await supabaseAdmin
+              .from("document_chunks")
+              .select("content")
+              .eq("document_id", targetId)
+              .order("chunk_index", { ascending: true })
+              .limit(20);
+
+            let content = "";
+            if (chunks && chunks.length > 0) {
+              content = chunks.map((c) => c.content).join("\n\n");
+            } else {
+              const { data: docRecord } = await supabaseAdmin
+                .from("documents")
+                .select("extracted_text")
+                .eq("id", targetId)
+                .maybeSingle();
+              content = docRecord?.extracted_text || "";
+            }
+
+            if (content.trim()) {
+              docContextParts.push(`=== DOCUMENT: "${docTitle}" ===\n${content.trim()}`);
+            }
+          }
         }
 
-        if (targetId) {
-          const { data: chunks } = await supabaseAdmin
-            .from("document_chunks")
-            .select("content")
-            .eq("document_id", targetId)
-            .order("chunk_index", { ascending: true })
-            .limit(30);
-
-          if (chunks && chunks.length > 0) {
-            docContext = chunks.map((c) => c.content).join("\n\n");
-          } else {
-            const { data: doc } = await supabaseAdmin
-              .from("documents")
-              .select("extracted_text")
-              .eq("id", targetId)
-              .maybeSingle();
-            docContext = doc?.extracted_text || "";
-          }
+        if (docContextParts.length > 0) {
+          docContext = docContextParts.join("\n\n--------------------\n\n");
         }
       } catch (err) {
         console.warn("Failed to load document content from Supabase:", err);
@@ -143,11 +205,36 @@ export async function POST(request: NextRequest) {
     // Build prompt with document context or general conversational prompt
     let prompt = trimmed;
     if (docContext) {
-      prompt = `Document Name: "${documentName || "Uploaded Document"}"\n\nDocument Content:\n"""\n${docContext}\n"""\n\nUser Question: ${trimmed}\n\nInstructions: Answer the question accurately using ONLY the document content above. If the document does not contain the answer, state clearly that the document does not mention it.`;
+      prompt = `Available Uploaded Documents (${docItems.length}):
+${docContext}
+
+User Question: ${trimmed}
+
+Instructions for Response Formatting & Clarity:
+1. Answer accurately based on the provided document(s) above. If multiple documents are provided, cite which document each fact comes from. If none of the documents contain the answer, state that clearly.
+2. Structure your answer to be clean, organized, and very easy to read:
+   - Use clear markdown headings (## or ###) to separate topics or sections.
+   - Use bullet points (- ) or numbered lists (1. ) for items, tasks, key points, or status updates.
+   - Bold (**key terms**, dates, status, action items) for quick scanning.
+   - If the data has dates, tasks, or tabular info, format it with a clean markdown table.
+   - Avoid long unbroken paragraphs. Keep explanations concise and bite-sized.
+   - Respond in the language used by the user (English or Filipino/Taglish).`;
     } else if (documentName && typeof documentName === "string") {
-      prompt = `The user has uploaded a document named "${documentName}". Please answer based on the content of that document if relevant.\n\nUser question: ${trimmed}`;
+      prompt = `The user has uploaded a document named "${documentName}". Please answer based on the content of that document if relevant.
+
+User question: ${trimmed}
+
+Formatting guidelines:
+- Use clean headings, bullet points, and bold key terms.
+- Avoid dense walls of text. Make the response scannable and easy to digest.`;
     } else {
-      prompt = `You are DocuChat AI, a helpful, intelligent, and friendly AI assistant. The user hasn't uploaded a document yet, but you can chat with them normally, answer general questions, help brainstorm, or assist them with anything they need. Always be concise, helpful, and polite.\n\nUser: ${trimmed}`;
+      prompt = `You are DocuChat AI, a helpful, intelligent, and friendly AI assistant. The user hasn't uploaded a document yet.
+Formatting guidelines:
+- Always format your answers cleanly using markdown headings, bullet points, and bold key phrases.
+- Keep responses readable, friendly, and structured.
+- Respond in the language of the user.
+
+User: ${trimmed}`;
     }
 
     // Call Gemini with fallback model support
@@ -180,7 +267,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ answer });
+    // Cache the newly generated answer
+    if (qaCache.size >= MAX_CACHE_SIZE) {
+      const oldestKey = qaCache.keys().next().value;
+      if (oldestKey) qaCache.delete(oldestKey);
+    }
+    qaCache.set(cacheKey, {
+      answer,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+
+    return NextResponse.json({ answer, cached: false });
   } catch (error: any) {
     console.error("Chat API error:", error);
 

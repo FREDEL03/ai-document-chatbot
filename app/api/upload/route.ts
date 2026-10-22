@@ -183,6 +183,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let signedUrl: string | null = null;
+    const { data: urlData } = await supabaseAdmin.storage
+      .from("documents")
+      .createSignedUrl(filePath, 3600);
+    if (urlData?.signedUrl) {
+      signedUrl = urlData.signedUrl;
+    }
+
     return NextResponse.json({
       success: true,
       documentId,
@@ -190,6 +198,7 @@ export async function POST(request: NextRequest) {
       originalName: file.name,
       size: file.size,
       type: file.type,
+      signedUrl,
       extracted: !!extractedText,
       chunkCount: chunks.length,
       message: "File uploaded and processed successfully.",
