@@ -173,6 +173,9 @@ export default function Home() {
 
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [showClearFilesConfirm, setShowClearFilesConfirm] = useState(false);
+  const [convoToDelete, setConvoToDelete] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
   const [showDocModal, setShowDocModal] = useState(false);
@@ -528,6 +531,12 @@ export default function Home() {
 
   const handleDeleteConversation = (convoId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setConvoToDelete(convoId);
+  };
+
+  const confirmDeleteConversation = () => {
+    if (!convoToDelete) return;
+    const convoId = convoToDelete;
     setConversations((prev) => {
       const updated = prev.filter((c) => c.id !== convoId);
       if (user?.id) {
@@ -541,10 +550,17 @@ export default function Home() {
     if (currentConvoId === convoId) {
       handleNewChat();
     }
+    setConvoToDelete(null);
     toast.info("Conversation deleted");
   };
 
   const handleRemoveDocument = (docId: string, docName: string) => {
+    setFileToDelete({ id: docId, name: docName });
+  };
+
+  const confirmRemoveDocument = () => {
+    if (!fileToDelete) return;
+    const { id: docId, name: docName } = fileToDelete;
     setDocuments((prev) => {
       const filtered = prev.filter((d) => d.id !== docId && d.name !== docName);
       if (filtered.length === 0) {
@@ -558,14 +574,20 @@ export default function Home() {
       }
       return filtered;
     });
+    setFileToDelete(null);
     toast.info(`Removed "${docName}"`);
   };
 
   const handleClearAllDocuments = () => {
+    setShowClearFilesConfirm(true);
+  };
+
+  const confirmClearAllDocuments = () => {
     setDocuments([]);
     setCurrentDocument(null);
     setCurrentDocumentId(null);
     setDocUrl(null);
+    setShowClearFilesConfirm(false);
     toast.info("All documents cleared. General chat mode active.");
   };
 
@@ -1249,6 +1271,105 @@ export default function Home() {
                 ) : (
                   "Sign Out"
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Single File Confirmation Dialog */}
+      {fileToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-[#2B2B2E]">Remove uploaded file?</h3>
+              <p className="text-xs text-[#6B6B73] mt-1 break-all">
+                Are you sure you want to remove <span className="font-semibold text-[#2B2B2E]">"{fileToDelete.name}"</span>?
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setFileToDelete(null)}
+                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveDocument}
+                className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-semibold text-white shadow-md shadow-red-600/25 transition-all cursor-pointer flex items-center justify-center"
+              >
+                Remove File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Files Confirmation Dialog */}
+      {showClearFilesConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-[#2B2B2E]">Clear all uploaded files?</h3>
+              <p className="text-xs text-[#6B6B73] mt-1">
+                All {documents.length} active documents will be removed. The assistant will switch to general chat mode.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearFilesConfirm(false)}
+                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmClearAllDocuments}
+                className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-semibold text-white shadow-md shadow-red-600/25 transition-all cursor-pointer flex items-center justify-center"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Conversation Confirmation Dialog */}
+      {convoToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-[#2B2B2E]">Delete conversation?</h3>
+              <p className="text-xs text-[#6B6B73] mt-1">
+                This conversation will be permanently removed from your chat history.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConvoToDelete(null)}
+                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteConversation}
+                className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-semibold text-white shadow-md shadow-red-600/25 transition-all cursor-pointer flex items-center justify-center"
+              >
+                Delete
               </button>
             </div>
           </div>
