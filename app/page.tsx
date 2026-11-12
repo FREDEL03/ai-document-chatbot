@@ -31,7 +31,9 @@ export default function Home() {
       timestamp: "Just now",
     },
   ]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // waiting for the first chunk (typing dots)
+  const [generating, setGenerating] = useState(false); // request in flight, including while text streams
+  const abortRef = useRef<AbortController | null>(null);
   const [uploading, setUploading] = useState(false);
   const [documents, setDocuments] = useState<UploadedDoc[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -163,10 +165,34 @@ export default function Home() {
     }
   }, [messages, loading, user]);
 
-  const handleSend = async (e?: React.SyntheticEvent, customText?: string) => {
+  const handleStop = () => abortRef.current?.abort();
+
+  const lastUserIndex = () => {
+    for (let i = messages.length - 1; i >= 0; i--) if (messages[i].sender === "user") return i;
+    return -1;
+  };
+
+  // Drop the last answer and ask the same question again (server skips its cache)
+  const handleRegenerate = () => {
+    const i = lastUserIndex();
+    if (i < 0 || generating) return;
+    const text = messages[i].text;
+    setMessages(messages.slice(0, i + 1));
+    handleSend(undefined, text, { regenerate: true });
+  };
+
+  // Put the last question back in the input box and remove it (and its answer) from the chat
+  const handleEditLast = () => {
+    const i = lastUserIndex();
+    if (i < 0 || generating) return;
+    setMessage(messages[i].text);
+    setMessages(messages.slice(0, i));
+  };
+
+  const handleSend = async (e?: React.SyntheticEvent, customText?: string, opts?: { regenerate?: boolean }) => {
     if (e) e.preventDefault();
     const textToSend = (customText || message).trim();
-    if (!textToSend || loading) return;
+    if (!textToSend || generating) return;
 
     const timeString = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const userMessage: Message = {
@@ -177,14 +203,19 @@ export default function Home() {
     };
 
     setMessage("");
-    setMessages((prev) => [...prev, userMessage]);
+    if (!opts?.regenerate) setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
+    setGenerating(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const response = await authFetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
+          regenerate: !!opts?.regenerate,
           message: textToSend,
           document: currentDocument,
           documentId: currentDocumentId,
@@ -236,6 +267,7 @@ export default function Home() {
         }
       }
     } catch (error: any) {
+      if (error?.name === "AbortError") return; // user pressed Stop: keep whatever text already arrived
       console.error("Chat error:", error);
       toast.error(error?.message || "Failed to process chat");
       setMessages((prev) => [
@@ -249,6 +281,8 @@ export default function Home() {
       ]);
     } finally {
       setLoading(false);
+      setGenerating(false);
+      abortRef.current = null;
     }
   };
 
@@ -701,12 +735,16 @@ export default function Home() {
           documents={documents}
           handleViewDocument={handleViewDocument}
           messagesEndRef={messagesEndRef}
+          generating={generating}
+          onRegenerate={handleRegenerate}
+          onEditLast={handleEditLast}
         />
 
         <Composer
           messages={messages}
           documents={documents}
-          loading={loading}
+          generating={generating}
+          onStop={handleStop}
           uploading={uploading}
           message={message}
           setMessage={setMessage}

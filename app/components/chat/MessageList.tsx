@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import type { Message, UploadedDoc } from "./types";
 import { markdownComponents } from "./markdown";
-import { FileText, Loader2, Sparkles, Copy, Check, Zap } from "lucide-react";
+import { FileText, Loader2, Sparkles, Copy, Check, Zap, Pencil, RotateCw } from "lucide-react";
 
 type MessageListProps = {
   messages: Message[];
@@ -14,12 +14,24 @@ type MessageListProps = {
   documents: UploadedDoc[];
   handleViewDocument: (doc?: UploadedDoc, page?: number | null) => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  generating: boolean;
+  onRegenerate: () => void;
+  onEditLast: () => void;
 };
 
 export function MessageList({
-  messages, loading, documents, handleViewDocument, messagesEndRef,
+  messages, loading, documents, handleViewDocument, messagesEndRef, generating, onRegenerate, onEditLast,
 }: MessageListProps) {
   const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  // Only the last question can be edited, and only the answer right after it can be regenerated
+  let lastUserIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].sender === "user") {
+      lastUserIdx = i;
+      break;
+    }
+  }
 
   return (
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
@@ -37,7 +49,7 @@ export function MessageList({
             </div>
           ) : (
             <div className="max-w-3xl mx-auto space-y-5">
-              {messages.map((msg) => (
+              {messages.map((msg, idx) => (
                 <div
                   key={msg.id}
                   className={`flex items-start gap-2.5 sm:gap-3 ${
@@ -66,6 +78,19 @@ export function MessageList({
                           {msg.timestamp}
                         </div>
                       )}
+                      {idx === lastUserIdx && !generating && (
+                        <div className="flex justify-end pt-0.5">
+                          <button
+                            type="button"
+                            onClick={onEditLast}
+                            className="inline-flex items-center gap-1 text-[11px] text-white/80 hover:text-white cursor-pointer"
+                            title="Edit this question"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            Edit
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="max-w-[92%] sm:max-w-[85%] bg-white border border-[#E4E2DE] rounded-2xl rounded-tl-xs p-4 sm:p-5 shadow-xs space-y-2 text-[#2B2B2E]">
@@ -81,6 +106,18 @@ export function MessageList({
                             </span>
                           )}
                         </div>
+                        <div className="flex items-center gap-1">
+                        {idx === messages.length - 1 && idx > lastUserIdx && lastUserIdx >= 0 && !generating && (
+                          <button
+                            type="button"
+                            onClick={onRegenerate}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-[#F3F2F0] text-[11px] text-[#6B6B73] hover:text-[#2B2B2E] transition-colors cursor-pointer"
+                            title="Regenerate response"
+                          >
+                            <RotateCw className="w-3 h-3" />
+                            <span>Regenerate</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
@@ -104,6 +141,7 @@ export function MessageList({
                             </>
                           )}
                         </button>
+                        </div>
                       </div>
 
                       {/* Rendered AI Markdown Content */}

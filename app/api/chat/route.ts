@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, document: documentName, documentId, documentIds, documents: docsPayload } = body;
+    const { message, document: documentName, documentId, documentIds, documents: docsPayload, regenerate } = body;
     if (typeof message !== "string") {
       return NextResponse.json(
         { error: "Field 'message' must be a string" },
@@ -140,7 +140,8 @@ export async function POST(request: NextRequest) {
     const cacheKey = buildCacheKey(trimmed, docIdentifiers, userId);
 
     const cached = qaCache.get(cacheKey);
-    if (cached && Date.now() < cached.expiresAt) {
+    // "Regenerate" skips the cache so the user gets a fresh answer (which then replaces the cached one)
+    if (!regenerate && cached && Date.now() < cached.expiresAt) {
       return NextResponse.json({ answer: cached.answer, sources: cached.sources, cached: true });
     }
 
@@ -335,9 +336,12 @@ User: ${trimmed}`;
             expiresAt: Date.now() + CACHE_TTL_MS,
           });
         } catch (err) {
-          console.error("Gemini stream interrupted:", err);
+          // Also hit when the client presses Stop (stream cancelled): nothing is cached
+          console.warn("Gemini stream interrupted:", err);
         }
-        controller.close();
+        try {
+          controller.close();
+        } catch {}
       },
     });
 
