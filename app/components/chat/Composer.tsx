@@ -4,17 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Message, UploadedDoc, Lang } from "./types";
 import { MAX_DOCS } from "./types";
-import { Send, Paperclip, Square, Mic } from "lucide-react";
+import { Send, Paperclip, Square, Mic, Loader2 } from "lucide-react";
+import { authFetch } from "@/src/lib/auth-fetch";
+import { startRecorder } from "@/src/lib/record-audio";
 
 // Speech recognition language for each answer-language setting ("auto" follows the browser's language)
 const speechLang = (lang: Lang) => (lang === "fil" ? "fil-PH" : lang === "en" ? "en-US" : navigator.language || "en-US");
+
+// Can this browser record audio (for the server-side transcription fallback)?
+const canRecord = () => !!navigator.mediaDevices && "MediaRecorder" in window;
 
 const MIC_ERRORS: Record<string, string> = {
   "not-allowed": "Microphone access was blocked. Allow it in your browser's site settings.",
   "service-not-allowed": "Microphone access was blocked. Allow it in your browser's site settings.",
   "no-speech": "I didn't hear anything. Try again.",
   "audio-capture": "No microphone found.",
-  network: "Voice input needs an internet connection.",
+  network: "Voice input isn't available right now. Please try again.",
   "language-not-supported": "Your browser doesn't support voice input in this language.",
 };
 
@@ -35,43 +40,117 @@ type ComposerProps = {
 export function Composer({
   messages, documents, generating, onStop, uploading, message, setMessage, currentDocument, openFileDialog, handleSend, language,
 }: ComposerProps) {
-  // Voice input via the browser's Web Speech API (Chrome/Edge/Safari; not Firefox)
+  // Voice input. Two modes:
+  //  "native": the browser's Web Speech API (live text; Chrome/Edge/Safari)
+  //  "record": record audio, transcribe on the server. Used when native is missing or its speech
+  //            service fails (Brave, Firefox, blocked Google speech service => "network" error).
   const [micSupported, setMicSupported] = useState(false);
+  const [mode, setMode] = useState<"native" | "record">("native");
   const [listening, setListening] = useState(false);
-  const recRef = useRef<any>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const recRef = useRef<any>(null); // native SpeechRecognition
+  const recorderRef = useRef<Awaited<ReturnType<typeof startRecorder>> | null>(null);
+  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageRef = useRef(message);
+  useEffect(() => {
+    messageRef.current = message;
+  });
 
   useEffect(() => {
     const w = window as any;
-    setMicSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
-    return () => recRef.current?.abort();
+    const hasNative = !!(w.SpeechRecognition || w.webkitSpeechRecognition);
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem("docuchat_voice");
+    } catch {}
+    setMicSupported(hasNative || canRecord());
+    setMode(hasNative && saved !== "record" ? "native" : "record");
+    return () => {
+      recRef.current?.abort();
+      recorderRef.current?.cancel();
+      if (autoStopRef.current) clearTimeout(autoStopRef.current);
+    };
   }, []);
+
+  // Append spoken words after whatever is already typed
+  const appendSpoken = (spoken: string) => {
+    const cur = messageRef.current;
+    setMessage((cur && !cur.endsWith(" ") ? cur + " " : cur) + spoken);
+  };
+
+  const startRecording = async () => {
+    try {
+      recorderRef.current = await startRecorder();
+      setListening(true);
+      autoStopRef.current = setTimeout(stopRecording, 60_000); // keeps the upload small
+    } catch {
+      toast.error("Couldn't access the microphone. Allow it in your browser's site settings.");
+    }
+  };
+
+  const stopRecording = async () => {
+    const recorder = recorderRef.current;
+    if (!recorder) return;
+    recorderRef.current = null;
+    if (autoStopRef.current) clearTimeout(autoStopRef.current);
+    setListening(false);
+    setTranscribing(true);
+    try {
+      const wav = await recorder.stop();
+      const form = new FormData();
+      form.append("audio", wav, "voice.wav");
+      form.append("language", language);
+      const res = await authFetch("/api/transcribe", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Transcription failed");
+      if (data.text) appendSpoken(data.text);
+      else toast.info("I didn't hear anything. Try again.");
+    } catch (err: any) {
+      toast.error(err?.message || "Voice input failed. Please try again.");
+    } finally {
+      setTranscribing(false);
+    }
+  };
 
   // Stop listening once a message is on its way
   useEffect(() => {
-    if (generating) recRef.current?.stop();
-  }, [generating]);
-
-  const toggleMic = () => {
-    if (listening) {
+    if (generating) {
       recRef.current?.stop();
-      return;
+      stopRecording();
     }
+  }, [generating]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startNative = () => {
     const w = window as any;
-    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
-    const rec = new SR();
+    const rec = new (w.SpeechRecognition || w.webkitSpeechRecognition)();
     rec.lang = speechLang(language);
     rec.interimResults = true;
     rec.continuous = false;
-    // Keep what's already typed and append the spoken words after it
-    const base = message && !message.endsWith(" ") ? message + " " : message;
+    const base = messageRef.current && !messageRef.current.endsWith(" ") ? messageRef.current + " " : messageRef.current;
+    let switchedToRecording = false;
     rec.onresult = (e: any) => {
       const spoken = Array.from(e.results as ArrayLike<any>)
         .map((r) => r[0].transcript)
         .join("");
       setMessage(base + spoken);
     };
-    rec.onerror = (e: any) => toast.error(MIC_ERRORS[e.error] || "Voice input failed. Please try again.");
-    rec.onend = () => setListening(false);
+    rec.onerror = (e: any) => {
+      if (e.error === "network" && canRecord()) {
+        // The browser's speech service is unreachable: remember that and record + transcribe on the server instead
+        switchedToRecording = true;
+        setMode("record");
+        try {
+          localStorage.setItem("docuchat_voice", "record");
+        } catch {}
+        toast.info("Your browser's speech service isn't available, so I'll record and transcribe instead.");
+        startRecording();
+      } else {
+        toast.error(MIC_ERRORS[e.error] || "Voice input failed. Please try again.");
+      }
+    };
+    rec.onend = () => {
+      if (!switchedToRecording) setListening(false);
+    };
     recRef.current = rec;
     try {
       rec.start();
@@ -79,6 +158,17 @@ export function Composer({
     } catch {
       setListening(false);
     }
+  };
+
+  const toggleMic = () => {
+    if (transcribing) return;
+    if (listening) {
+      if (mode === "native") recRef.current?.stop();
+      else stopRecording();
+      return;
+    }
+    if (mode === "native") startNative();
+    else startRecording();
   };
 
   // Prefer questions generated from the documents; fall back to generic ones
@@ -143,12 +233,15 @@ export function Composer({
                 <button
                   type="button"
                   onClick={toggleMic}
-                  title={listening ? "Stop listening" : "Speak your question"}
-                  className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 ${
+                  disabled={transcribing}
+                  title={
+                    transcribing ? "Transcribing..." : listening ? (mode === "record" ? "Tap to stop and transcribe" : "Stop listening") : "Speak your question"
+                  }
+                  className={`p-2.5 rounded-xl transition-colors cursor-pointer shrink-0 disabled:cursor-wait ${
                     listening ? "bg-red-500 text-white animate-pulse" : "text-muted hover:text-[#5B6CFF] hover:bg-card"
                   }`}
                 >
-                  <Mic className="w-5 h-5" />
+                  {transcribing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mic className="w-5 h-5" />}
                 </button>
               )}
 
