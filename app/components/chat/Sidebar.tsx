@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { UploadedDoc, Conversation } from "./types";
 import { MAX_DOCS } from "./types";
-import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download, Search } from "lucide-react";
+import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download, Search, Link2 } from "lucide-react";
 
 type SidebarProps = {
   user: any;
@@ -25,12 +25,25 @@ type SidebarProps = {
   canExport: boolean;
   onExportMarkdown: () => void;
   onExportPdf: () => void;
+  onAddUrl: (url: string) => Promise<boolean>;
 };
 
 export function Sidebar({
-  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf,
+  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf, onAddUrl,
 }: SidebarProps) {
   const [historyQuery, setHistoryQuery] = useState("");
+  const [urlInput, setUrlInput] = useState("");
+  const [addingUrl, setAddingUrl] = useState(false);
+
+  const submitUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = urlInput.trim();
+    if (!url || addingUrl) return;
+    setAddingUrl(true);
+    const ok = await onAddUrl(url);
+    setAddingUrl(false);
+    if (ok) setUrlInput("");
+  };
 
   // Match on title or any message text; when only a message matches, show a snippet of it
   const q = historyQuery.trim().toLowerCase();
@@ -103,8 +116,31 @@ export function Sidebar({
             )}
           </button>
           <p className="text-[10px] text-muted text-center">
-            PDF, TXT, DOC, DOCX • max {MAX_DOCS} files (4.5MB ea)
+            PDF, Word, Excel, PPT, CSV, TXT • max {MAX_DOCS} files (4.5MB ea)
           </p>
+
+          {/* Import a webpage as a document */}
+          <form onSubmit={submitUrl} className="flex items-center gap-1.5 pt-1">
+            <div className="relative flex-1 min-w-0">
+              <Link2 className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+              <input
+                type="text"
+                inputMode="url"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="Or paste a webpage link"
+                disabled={addingUrl || documents.length >= MAX_DOCS}
+                className="w-full pl-8 pr-2 py-1.5 rounded-lg bg-card border border-border focus:border-[#5B6CFF] focus:outline-none text-xs text-foreground placeholder-muted disabled:opacity-50"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!urlInput.trim() || addingUrl || uploading || documents.length >= MAX_DOCS}
+              className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-border border border-border text-xs font-medium text-foreground disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+            >
+              {addingUrl ? <Loader2 className="w-3 h-3 animate-spin" /> : "Add"}
+            </button>
+          </form>
         </div>
 
         {/* Scrollable Middle: Documents & Chat History */}

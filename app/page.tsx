@@ -28,7 +28,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "👋 Hello! I'm DocuChat AI. You can chat with me freely, or upload a document (PDF, TXT, DOC, DOCX) to ask questions about its content.",
+      text: "👋 Hello! I'm DocuChat AI. You can chat with me freely, or upload a document (PDF, Word, Excel, PowerPoint, CSV, TXT, image) to ask questions about its content.",
       sender: "ai",
       timestamp: "Just now",
     },
@@ -381,6 +381,26 @@ export default function Home() {
     toSummarize.forEach((d) => summarizeDocument(d.id, d.name));
   };
 
+  // Fetch a webpage's text on the server, then feed it through the normal upload pipeline as a .txt file
+  const addUrl = async (url: string): Promise<boolean> => {
+    const toastId = toast.loading("Reading webpage...");
+    try {
+      const res = await authFetch("/api/fetch-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not read that page");
+      toast.dismiss(toastId);
+      await uploadFiles([new File([data.text], data.name, { type: "text/plain" })]);
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || "Could not read that page", { id: toastId });
+      return false;
+    }
+  };
+
   // Ask the server for a short summary + 3 suggested questions, then post it in the chat
   const summarizeDocument = async (docId: string, docName: string) => {
     try {
@@ -427,6 +447,10 @@ export default function Home() {
       "application/pdf": [".pdf"],
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
       "text/plain": [".txt"],
+      "text/csv": [".csv"],
+      "application/vnd.ms-excel": [".csv"], // how Windows often reports .csv
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
       "application/msword": [".doc"],
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
     },
@@ -682,7 +706,7 @@ export default function Home() {
             <Upload className="w-10 h-10" />
           </div>
           <p className="text-xl font-bold text-foreground">Drop your document here</p>
-          <p className="text-xs text-muted mt-1">PDF, TXT, DOC, DOCX up to 4.5MB</p>
+          <p className="text-xs text-muted mt-1">PDF, Word, Excel, PowerPoint, CSV, TXT up to 4.5MB</p>
         </div>
       )}
 
@@ -715,6 +739,7 @@ export default function Home() {
         canExport={messages.some((m) => m.sender === "user")}
         onExportMarkdown={() => exportMarkdown(messages, documents)}
         onExportPdf={() => exportPdf(documents)}
+        onAddUrl={addUrl}
       />
 
 

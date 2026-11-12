@@ -4,6 +4,7 @@ import { chunkText } from "@/src/lib/chunk-text";
 import { readImages } from "@/src/lib/read-images";
 import { embedTexts } from "@/src/lib/embed";
 import { guard } from "@/src/lib/api-guard";
+import { extractCsv, extractXlsx, extractPptx } from "@/src/lib/extract-office";
 
 export const maxDuration = 60;
 
@@ -17,6 +18,12 @@ const ALLOWED_TYPES = [
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
+// Browsers report CSV/Office files inconsistently (e.g. .csv as application/vnd.ms-excel), so go by extension
+const EXT_MIME: Record<string, string> = {
+  csv: "text/csv",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+};
 const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB limit for Vercel Serverless
 
 export async function POST(request: NextRequest) {
@@ -37,9 +44,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    const ext = file.name.toLowerCase().split(".").pop() ?? "";
+    const mime = EXT_MIME[ext] ?? file.type;
+    if (!ALLOWED_TYPES.includes(mime) && !Object.values(EXT_MIME).includes(mime)) {
       return NextResponse.json(
-        { error: "Invalid file type. Only PDF, images, TXT, DOC, DOCX are allowed." },
+        { error: "Invalid file type. Only PDF, images, TXT, CSV, DOC, DOCX, XLSX, PPTX are allowed." },
         { status: 400 }
       );
     }
@@ -47,7 +56,7 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
-        { error: "File size exceeds 10 MB limit." },
+        { error: "File size exceeds 4.5 MB limit." },
         { status: 400 }
       );
     }
@@ -66,7 +75,7 @@ export async function POST(request: NextRequest) {
     const { error: storageError } = await supabaseAdmin.storage
       .from("documents")
       .upload(filePath, buffer, {
-        contentType: file.type,
+        contentType: mime,
         upsert: false,
       });
 
@@ -87,7 +96,7 @@ export async function POST(request: NextRequest) {
         filename: filename,
         original_name: file.name,
         file_size: file.size,
-        mime_type: file.type,
+        mime_type: mime,
         storage_path: filePath,
         extracted_text: "", // will update after extraction
         chunk_count: 0,
@@ -113,7 +122,7 @@ export async function POST(request: NextRequest) {
     let pdfImageText = "";
 
     // Extract text based on file type
-    if (file.type === "application/pdf") {
+    if (mime === "application/pdf") {
       // PDF text extraction (polyfill DOM globals for Node/Vercel serverless)
       try {
         if (typeof (globalThis as any).DOMMatrix === "undefined") {
@@ -151,7 +160,7 @@ export async function POST(request: NextRequest) {
         pdfPages = result.pages.map((p) => ({ num: p.num, text: p.text.replace(/\s+/g, " ").trim() }));
         await parser.destroy();
         // Also read text/figures inside images (OCR via Gemini vision)
-        const imageText = await readImages(buffer, file.type);
+        const imageText = await readImages(buffer, mime);
         if (imageText === null) imageReadFailed = true;
         else if (imageText) {
           pdfImageText = `[Image content: ${imageText.replace(/\s+/g, " ")}]`;
@@ -164,21 +173,37 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-    } else if (file.type === "text/plain") {
+    } else if (mime === "text/plain") {
       // Plain text
       extractedText = buffer.toString("utf8").replace(/\s+/g, " ").trim();
     }
-    else if (file.type.startsWith("image/")) {
-      const imageText = await readImages(buffer, file.type);
+    else if (mime.startsWith("image/")) {
+      const imageText = await readImages(buffer, mime);
       if (imageText === null) imageReadFailed = true;
       extractedText = (imageText ?? "").replace(/\s+/g, " ").trim();
-    } else if (file.type.includes("wordprocessingml")) {
+    } else if (mime.includes("wordprocessingml")) {
       const mammoth = await import("mammoth");
       extractedText = (await mammoth.extractRawText({ buffer })).value.replace(/\s+/g, " ").trim();
-    } else if (file.type === "application/msword") {
+    } else if (mime === "application/msword") {
       // @ts-expect-error no types
       const { default: WordExtractor } = await import("word-extractor");
       extractedText = (await new WordExtractor().extract(buffer)).getBody().replace(/\s+/g, " ").trim();
+    } else if (ext === "csv" || ext === "xlsx" || ext === "pptx") {
+      // Row/slide structure is kept (newlines survive chunking) so tables stay readable
+      try {
+        extractedText = (
+          ext === "csv" ? extractCsv(buffer) : ext === "xlsx" ? await extractXlsx(buffer) : await extractPptx(buffer)
+        ).trim();
+      } catch (err: any) {
+        console.error(`${ext} extraction error:`, err);
+        // Don't leave an unreadable file behind in storage / the documents table
+        await supabaseAdmin.from("documents").delete().eq("id", documentId);
+        await supabaseAdmin.storage.from("documents").remove([filePath]);
+        return NextResponse.json(
+          { error: `Could not read this ${ext.toUpperCase()} file (is it corrupted or password-protected?)` },
+          { status: 422 }
+        );
+      }
     }
 
     // If text extracted, chunk and save chunks
@@ -238,7 +263,7 @@ export async function POST(request: NextRequest) {
       filename,
       originalName: file.name,
       size: file.size,
-      type: file.type,
+      type: mime,
       signedUrl,
       extracted: !!extractedText,
       imageReadFailed,

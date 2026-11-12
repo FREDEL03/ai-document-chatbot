@@ -274,6 +274,16 @@ export function DocModal({
                   </div>
                 ) : docUrl && /\.(txt|docx?)$/i.test(currentDocument || "") ? (
                   <FileViewer key={docUrl} url={docUrl} name={currentDocument!} fallbackText={docText} />
+                ) : docText ? (
+                  // CSV / XLSX / PPTX have no visual viewer: show the text the AI reads instead
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="p-3 bg-surface border-b border-border text-[11px] text-muted">
+                      No visual preview for this file type. Showing the extracted text:
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-foreground text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text bg-card">
+                      {docText}
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted text-xs">
                     Preview not available for this file type.

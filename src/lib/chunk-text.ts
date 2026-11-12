@@ -13,7 +13,9 @@ export function chunkText(
     );
   }
 
-  const cleanText = text.replace(/\s+/g, " ").trim();
+  // Collapse spaces/tabs but keep line breaks, so rows of a table or slide stay on separate lines.
+  // (Callers that pass already-flattened text get the same result as before.)
+  const cleanText = text.replace(/[^\S\n]+/g, " ").replace(/\s*\n\s*/g, "\n").trim();
 
   if (!cleanText) {
     return [];
