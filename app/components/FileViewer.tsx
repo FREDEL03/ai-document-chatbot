@@ -43,6 +43,17 @@ export function FileViewer({ url, name, fallbackText }: { url: string; name: str
   const showText = ext === "txt" ? text : fallbackText;
   const asText = ext !== "docx" || failed;
 
+  // Legacy .doc can't be rendered in-browser: use Microsoft's Office viewer (needs a publicly reachable URL)
+  if (ext === "doc") {
+    return (
+      <iframe
+        src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`}
+        className="w-full h-full border-0 bg-white"
+        title="Document preview"
+      />
+    );
+  }
+
   return (
     <div className="flex-1 overflow-auto bg-white relative">
       {loading && (
@@ -53,11 +64,6 @@ export function FileViewer({ url, name, fallbackText }: { url: string; name: str
       {ext === "docx" && !failed && <div ref={box} className="docx-viewer" />}
       {asText && (
         <div className="p-5 text-[#2B2B2E] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
-          {ext === "doc" && (
-            <p className="mb-3 font-sans text-[11px] text-amber-800 bg-amber-50 border border-amber-200/60 rounded-lg p-2">
-              Legacy .doc can&apos;t be rendered visually, showing extracted text. Download the original for full layout.
-            </p>
-          )}
           {showText || "No content found in this file."}
         </div>
       )}
