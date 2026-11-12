@@ -51,10 +51,6 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
             </div>
             <div className="flex items-center gap-2.5">
               <span className="font-extrabold text-lg sm:text-xl text-foreground tracking-tight">DocuChat AI</span>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold bg-accent/10 text-accent border border-accent/20 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                RAG 2.0
-              </span>
             </div>
           </div>
 
@@ -220,7 +216,7 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
         </div>
 
         {/* Features */}
-        <div id="features" className="mt-20 sm:mt-28 w-full max-w-5xl scroll-mt-28">
+        <div id="features" className="reveal mt-20 sm:mt-28 w-full max-w-5xl scroll-mt-28">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Everything you need to understand a document</h2>
             <p className="text-sm text-muted mt-2">Built for quick answers you can verify</p>
@@ -239,7 +235,7 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
         </div>
 
         {/* 3 Step Process */}
-        <div className="mt-20 sm:mt-28 w-full max-w-4xl">
+        <div className="reveal mt-20 sm:mt-28 w-full max-w-4xl">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">How DocuChat AI Works</h2>
             <p className="text-sm text-muted mt-2">Simple 3-step pipeline for fast, factual document insights</p>
@@ -276,6 +272,19 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Final CTA */}
+        <div className="reveal mt-20 sm:mt-28 w-full max-w-4xl rounded-3xl border border-accent/20 bg-gradient-to-br from-accent/10 via-card to-card p-8 sm:p-12 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">Ready to ask your first question?</h2>
+          <p className="text-sm sm:text-base text-muted mt-3">Create a free account and start chatting with your documents in under a minute.</p>
+          <button
+            onClick={onGetStarted}
+            className="mt-7 px-8 py-4 rounded-2xl bg-accent hover:bg-accent-hover text-white font-semibold text-base shadow-lg shadow-accent/25 active:scale-95 transition-all cursor-pointer inline-flex items-center gap-2.5"
+          >
+            <span>Get Started Free</span>
+            <ArrowRight className="w-5 h-5" />
+          </button>
         </div>
       </main>
 
