@@ -493,6 +493,7 @@ export default function Home() {
     maxFiles: MAX_DOCS,
     accept: {
       "application/pdf": [".pdf"],
+      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
       "text/plain": [".txt"],
       "application/msword": [".doc"],
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
@@ -1512,7 +1513,7 @@ export default function Home() {
                       </button>
                     </div>
                   )
-                ) : docUrl && (currentDocument?.toLowerCase().endsWith(".png") || currentDocument?.toLowerCase().endsWith(".jpg") || currentDocument?.toLowerCase().endsWith(".jpeg")) ? (
+                ) : docUrl && (currentDocument?.toLowerCase().endsWith(".png") || currentDocument?.toLowerCase().endsWith(".jpg") || currentDocument?.toLowerCase().endsWith(".jpeg") || currentDocument?.toLowerCase().endsWith(".webp")) ? (
                   <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
                     <img src={docUrl} alt="Document" className="max-w-full max-h-full rounded-lg object-contain shadow-sm" />
                   </div>

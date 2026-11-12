@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { chunkText } from "@/src/lib/chunk-text";
+import { readImages } from "@/src/lib/read-images";
 
 export const maxDuration = 30;
 
 // Define allowed file types and max size (4.5 MB for Vercel)
 const ALLOWED_TYPES = [
   "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
   "text/plain",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -30,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Invalid file type. Only PDF, TXT, DOC, DOCX are allowed." },
+        { error: "Invalid file type. Only PDF, images, TXT, DOC, DOCX are allowed." },
         { status: 400 }
       );
     }
@@ -137,6 +141,9 @@ export async function POST(request: NextRequest) {
         const result = await parser.getText();
         extractedText = result.text.replace(/\s+/g, " ").trim();
         await parser.destroy();
+        // Also read text/figures inside images (OCR via Gemini vision)
+        const imageText = await readImages(buffer, file.type);
+        if (imageText) extractedText += ` [Image content: ${imageText.replace(/\s+/g, " ")}]`;
       } catch (pdfError: any) {
         console.error("PDF extraction error:", pdfError);
         return NextResponse.json(
@@ -148,7 +155,9 @@ export async function POST(request: NextRequest) {
       // Plain text
       extractedText = buffer.toString("utf8").replace(/\s+/g, " ").trim();
     }
-    else if (file.type.includes("wordprocessingml")) {
+    else if (file.type.startsWith("image/")) {
+      extractedText = (await readImages(buffer, file.type)).replace(/\s+/g, " ").trim();
+    } else if (file.type.includes("wordprocessingml")) {
       const mammoth = await import("mammoth");
       extractedText = (await mammoth.extractRawText({ buffer })).value.replace(/\s+/g, " ").trim();
     } else if (file.type === "application/msword") {
