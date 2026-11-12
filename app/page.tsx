@@ -784,18 +784,18 @@ export default function Home() {
       {/* Main Chat Panel */}
       <main className="flex-1 flex flex-col bg-background relative">
         {/* Header Bar */}
-        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="sm:hidden p-2 rounded-lg text-muted hover:text-foreground hover:bg-surface cursor-pointer"
+              className="sm:hidden shrink-0 p-2 rounded-lg text-muted hover:text-foreground hover:bg-surface cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
 
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-foreground text-sm sm:text-base">Document Assistant</h2>
+                <h2 className="font-semibold text-foreground text-sm sm:text-base truncate">Document Assistant</h2>
                 {documents.length > 0 ? (
                   <button
                     onClick={() => handleViewDocument()}
@@ -808,14 +808,17 @@ export default function Home() {
                   </button>
                 ) : null}
               </div>
-              <p className="text-xs text-muted">RAG Semantic Search & Q&A</p>
+              <p className="hidden sm:block text-xs text-muted truncate">RAG Semantic Search & Q&A</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-foreground shadow-xs">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full whitespace-nowrap bg-card border border-border text-xs font-medium text-foreground shadow-xs">
               <span className={`w-2 h-2 rounded-full ${documents.length > 0 ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`} />
-              <span>
+              <span className="sm:hidden">
+                {documents.length === 0 ? "Chat" : documents.length === 1 ? "1 doc" : `${documents.length} docs`}
+              </span>
+              <span className="hidden sm:inline">
                 {documents.length === 1
                   ? "1 Document Active"
                   : documents.length > 1
