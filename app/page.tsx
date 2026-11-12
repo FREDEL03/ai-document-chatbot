@@ -451,7 +451,11 @@ export default function Home() {
         setCurrentDocumentId(newDoc.id);
         setDocUrl(newDoc.url || localBlob);
 
-        toast.success(`"${file.name}" ready for chat!`, { id: toastId });
+        if (data.imageReadFailed) {
+          toast.warning(`"${file.name}" uploaded, but images inside could not be read (AI busy). Re-upload to retry.`, { id: toastId, duration: 8000 });
+        } else {
+          toast.success(`"${file.name}" ready for chat!`, { id: toastId });
+        }
         successCount++;
       } catch (err: any) {
         toast.error(`Failed to upload "${file.name}": ${err?.message || "Error"}`, { id: toastId });

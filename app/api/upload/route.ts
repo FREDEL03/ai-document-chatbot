@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
     const documentId = docData.id;
     let extractedText = "";
     let chunks: string[] = [];
+    let imageReadFailed = false;
 
     // Extract text based on file type
     if (file.type === "application/pdf") {
@@ -143,7 +144,8 @@ export async function POST(request: NextRequest) {
         await parser.destroy();
         // Also read text/figures inside images (OCR via Gemini vision)
         const imageText = await readImages(buffer, file.type);
-        if (imageText) extractedText += ` [Image content: ${imageText.replace(/\s+/g, " ")}]`;
+        if (imageText === null) imageReadFailed = true;
+        else if (imageText) extractedText += ` [Image content: ${imageText.replace(/\s+/g, " ")}]`;
       } catch (pdfError: any) {
         console.error("PDF extraction error:", pdfError);
         return NextResponse.json(
@@ -156,7 +158,9 @@ export async function POST(request: NextRequest) {
       extractedText = buffer.toString("utf8").replace(/\s+/g, " ").trim();
     }
     else if (file.type.startsWith("image/")) {
-      extractedText = (await readImages(buffer, file.type)).replace(/\s+/g, " ").trim();
+      const imageText = await readImages(buffer, file.type);
+      if (imageText === null) imageReadFailed = true;
+      extractedText = (imageText ?? "").replace(/\s+/g, " ").trim();
     } else if (file.type.includes("wordprocessingml")) {
       const mammoth = await import("mammoth");
       extractedText = (await mammoth.extractRawText({ buffer })).value.replace(/\s+/g, " ").trim();
@@ -216,6 +220,7 @@ export async function POST(request: NextRequest) {
       type: file.type,
       signedUrl,
       extracted: !!extractedText,
+      imageReadFailed,
       chunkCount: chunks.length,
       message: "File uploaded and processed successfully.",
     });
