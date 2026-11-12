@@ -9,10 +9,14 @@ export async function readImages(data: Buffer, mimeType: string): Promise<string
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return "";
   const ai = new GoogleGenAI({ apiKey });
+  const deadline = Date.now() + 25_000; // stay under the route's maxDuration
   for (const model of ["gemini-2.5-flash", "gemini-2.0-flash"]) {
+    const left = deadline - Date.now();
+    if (left < 3000) break;
     try {
       const res = await ai.models.generateContent({
         model,
+        config: { abortSignal: AbortSignal.timeout(left) },
         contents: [{ role: "user", parts: [{ inlineData: { mimeType, data: data.toString("base64") } }, { text: PROMPT }] }],
       });
       const text = res.text?.trim() || "";

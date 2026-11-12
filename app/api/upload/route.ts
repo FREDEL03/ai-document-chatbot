@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { chunkText } from "@/src/lib/chunk-text";
 import { readImages } from "@/src/lib/read-images";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 // Define allowed file types and max size (4.5 MB for Vercel)
 const ALLOWED_TYPES = [
