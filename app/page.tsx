@@ -327,50 +327,43 @@ export default function Home() {
         }),
       });
 
-      const raw = await response.text();
-      let data: any = {};
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        throw new Error(`Server returned error (${response.status})`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to get response");
-      }
-
-      const fullText = data.answer || "";
-      const isCached = !!data.cached;
       const aiId = Date.now() + 1;
-      setLoading(false);
+      const isJson = response.headers.get("content-type")?.includes("application/json");
 
-      if (isCached) {
+      if (isJson || !response.body) {
+        // Errors, mock replies and cached answers come back as JSON
+        const raw = await response.text();
+        let data: any = {};
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(`Server returned error (${response.status})`);
+        }
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to get response");
+        }
+        setLoading(false);
         setMessages((prev) => [
           ...prev,
-          { id: aiId, text: fullText, sender: "ai", timestamp: timeString, cached: true },
+          { id: aiId, text: data.answer || "", sender: "ai", timestamp: timeString, cached: !!data.cached },
         ]);
       } else {
+        // Live answer: append text as it streams in
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let acc = "";
+        setLoading(false);
         setMessages((prev) => [
           ...prev,
           { id: aiId, text: "", sender: "ai", timestamp: timeString, cached: false },
         ]);
-
-        let i = 0;
-        const chunkSize = Math.max(1, Math.floor(fullText.length / 80));
-        const timer = setInterval(() => {
-          i += chunkSize;
-          if (i >= fullText.length) {
-            setMessages((prev) =>
-              prev.map((m) => (m.id === aiId ? { ...m, text: fullText } : m))
-            );
-            clearInterval(timer);
-          } else {
-            const displayed = fullText.slice(0, i);
-            setMessages((prev) =>
-              prev.map((m) => (m.id === aiId ? { ...m, text: displayed } : m))
-            );
-          }
-        }, 16);
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          acc += decoder.decode(value, { stream: true });
+          const shown = acc.trimStart();
+          setMessages((prev) => prev.map((m) => (m.id === aiId ? { ...m, text: shown } : m)));
+        }
       }
     } catch (error: any) {
       console.error("Chat error:", error);

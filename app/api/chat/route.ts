@@ -239,27 +239,30 @@ User: ${trimmed}`;
 
     // Call Gemini with fallback model support
     const ai = new GoogleGenAI({ apiKey });
-    let answer = "";
     const modelsToTry = ["gemini-2.5-flash", "gemini-3-flash-preview"];
     let lastError: any = null;
+    let iter: AsyncIterator<any> | null = null;
+    let firstText = "";
 
+    // Open the stream and wait for the first non-empty chunk inside the try,
+    // so a failing model still falls back to the next one before we respond.
     for (const model of modelsToTry) {
       try {
-        const result = await ai.models.generateContent({
-          model,
-          contents: prompt,
-        });
-
-        const partText = result.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join("\n") || "";
-        answer = partText.trim() || result.text?.trim() || "";
-        if (answer) break;
+        const stream = await ai.models.generateContentStream({ model, contents: prompt });
+        const it = stream[Symbol.asyncIterator]();
+        let r = await it.next();
+        while (!r.done && !r.value.text) r = await it.next();
+        if (r.done) continue;
+        iter = it;
+        firstText = r.value.text as string;
+        break;
       } catch (err: any) {
         lastError ??= err; // keep the first (real) error, later fallbacks may just be 404s
         console.warn(`Model ${model} failed, trying next:`, err?.message || err);
       }
     }
 
-    if (!answer) {
+    if (!iter) {
       console.error("Gemini returned empty answer. Last error:", lastError);
       return NextResponse.json(
         { error: lastError?.message || "AI service returned empty response" },
@@ -267,18 +270,40 @@ User: ${trimmed}`;
       );
     }
 
-    // Cache the newly generated answer
-    if (qaCache.size >= MAX_CACHE_SIZE) {
-      const oldestKey = qaCache.keys().next().value;
-      if (oldestKey) qaCache.delete(oldestKey);
-    }
-    qaCache.set(cacheKey, {
-      answer,
-      createdAt: Date.now(),
-      expiresAt: Date.now() + CACHE_TTL_MS,
+    const activeIter = iter;
+    const encoder = new TextEncoder();
+    const responseStream = new ReadableStream({
+      async start(controller) {
+        let answer = firstText;
+        controller.enqueue(encoder.encode(firstText));
+        try {
+          for (let r = await activeIter.next(); !r.done; r = await activeIter.next()) {
+            const t: string = r.value.text;
+            if (t) {
+              answer += t;
+              controller.enqueue(encoder.encode(t));
+            }
+          }
+          // Cache only fully completed answers
+          if (qaCache.size >= MAX_CACHE_SIZE) {
+            const oldestKey = qaCache.keys().next().value;
+            if (oldestKey) qaCache.delete(oldestKey);
+          }
+          qaCache.set(cacheKey, {
+            answer: answer.trim(),
+            createdAt: Date.now(),
+            expiresAt: Date.now() + CACHE_TTL_MS,
+          });
+        } catch (err) {
+          console.error("Gemini stream interrupted:", err);
+        }
+        controller.close();
+      },
     });
 
-    return NextResponse.json({ answer, cached: false });
+    return new Response(responseStream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
+    });
   } catch (error: any) {
     console.error("Chat API error:", error);
 
