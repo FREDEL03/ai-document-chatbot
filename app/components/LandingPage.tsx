@@ -36,7 +36,7 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-accent/20 overflow-x-hidden relative">
+    <div className="h-screen overflow-y-auto bg-background text-foreground flex flex-col font-sans selection:bg-accent/20 overflow-x-hidden relative">
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-10%,rgba(91,108,255,0.08),rgba(255,255,255,0))] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40 pointer-events-none" />
