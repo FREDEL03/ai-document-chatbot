@@ -483,6 +483,8 @@ export default function Home() {
 
   const { getRootProps, getInputProps, isDragActive, open: openFileDialog } = useDropzone({
     onDrop,
+    onDropRejected: (rejected) =>
+      rejected.forEach((r) => toast.error(`"${r.file.name}" skipped: ${r.errors[0]?.message || "not allowed"}`)),
     noClick: true,
     noKeyboard: true,
     multiple: true,
