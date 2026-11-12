@@ -10,7 +10,7 @@ export async function readImages(data: Buffer, mimeType: string): Promise<string
   if (!apiKey) return "";
   const ai = new GoogleGenAI({ apiKey });
   const deadline = Date.now() + 25_000; // stay under the route's maxDuration
-  for (const model of ["gemini-2.5-flash", "gemini-2.0-flash"]) {
+  for (const model of ["gemini-2.5-flash", "gemini-3-flash-preview"]) {
     const left = deadline - Date.now();
     if (left < 3000) break;
     try {

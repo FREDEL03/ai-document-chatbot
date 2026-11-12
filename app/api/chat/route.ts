@@ -240,7 +240,7 @@ User: ${trimmed}`;
     // Call Gemini with fallback model support
     const ai = new GoogleGenAI({ apiKey });
     let answer = "";
-    const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+    const modelsToTry = ["gemini-2.5-flash", "gemini-3-flash-preview"];
     let lastError: any = null;
 
     for (const model of modelsToTry) {
@@ -254,7 +254,7 @@ User: ${trimmed}`;
         answer = partText.trim() || result.text?.trim() || "";
         if (answer) break;
       } catch (err: any) {
-        lastError = err;
+        lastError ??= err; // keep the first (real) error, later fallbacks may just be 404s
         console.warn(`Model ${model} failed, trying next:`, err?.message || err);
       }
     }
