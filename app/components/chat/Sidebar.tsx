@@ -2,7 +2,7 @@
 
 import type { UploadedDoc, Conversation } from "./types";
 import { MAX_DOCS } from "./types";
-import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare } from "lucide-react";
+import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download } from "lucide-react";
 
 type SidebarProps = {
   user: any;
@@ -21,10 +21,13 @@ type SidebarProps = {
   handleDeleteConversation: (id: string, e: React.MouseEvent) => void;
   setShowClearConfirm: (v: boolean) => void;
   setShowSignOutConfirm: (v: boolean) => void;
+  canExport: boolean;
+  onExportMarkdown: () => void;
+  onExportPdf: () => void;
 };
 
 export function Sidebar({
-  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm,
+  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf,
 }: SidebarProps) {
   return (
       <aside
@@ -217,6 +220,27 @@ export function Sidebar({
 
         {/* Sidebar Footer */}
         <div className="p-3.5 border-t border-[#E4E2DE] space-y-1.5 bg-white/50">
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={onExportMarkdown}
+              disabled={!canExport}
+              title="Download this chat as a Markdown file"
+              className="py-2 px-2 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Markdown
+            </button>
+            <button
+              onClick={onExportPdf}
+              disabled={!canExport}
+              title="Save this chat as PDF (opens the print dialog)"
+              className="py-2 px-2 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download className="w-3.5 h-3.5" />
+              PDF
+            </button>
+          </div>
+
           <button
             onClick={() => setShowClearConfirm(true)}
             className="w-full py-2 px-3 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-2 cursor-pointer"

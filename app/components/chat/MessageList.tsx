@@ -34,7 +34,7 @@ export function MessageList({
   }
 
   return (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+        <div id="chat-messages" className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
           {messages.length === 0 ? (
             <div className="h-full flex items-center justify-center p-4">
               <div className="max-w-md text-center space-y-3">
@@ -79,7 +79,7 @@ export function MessageList({
                         </div>
                       )}
                       {idx === lastUserIdx && !generating && (
-                        <div className="flex justify-end pt-0.5">
+                        <div data-no-export className="flex justify-end pt-0.5">
                           <button
                             type="button"
                             onClick={onEditLast}
@@ -106,7 +106,7 @@ export function MessageList({
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div data-no-export className="flex items-center gap-1">
                         {idx === messages.length - 1 && idx > lastUserIdx && lastUserIdx >= 0 && !generating && (
                           <button
                             type="button"
@@ -186,7 +186,7 @@ export function MessageList({
 
               {/* Typing indicator */}
               {loading && (
-                <div className="flex items-start gap-3">
+                <div data-no-export className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-xl bg-white text-[#5B6CFF] border border-[#E4E2DE] flex items-center justify-center shrink-0 shadow-xs">
                     <Loader2 className="w-4 h-4 animate-spin text-[#5B6CFF]" />
                   </div>

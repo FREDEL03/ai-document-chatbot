@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { FileText, Upload, Loader2, ExternalLink, Menu } from "lucide-react";
 import { getSupabaseClient } from "@/src/lib/supabase-client";
 import { authFetch } from "@/src/lib/auth-fetch";
+import { exportMarkdown, exportPdf } from "@/src/lib/export-chat";
 import { LandingPage } from "@/app/components/LandingPage";
 import { AuthModal } from "@/app/components/AuthModal";
 import { Sidebar } from "@/app/components/chat/Sidebar";
@@ -710,6 +711,9 @@ export default function Home() {
         handleDeleteConversation={handleDeleteConversation}
         setShowClearConfirm={setShowClearConfirm}
         setShowSignOutConfirm={setShowSignOutConfirm}
+        canExport={messages.some((m) => m.sender === "user")}
+        onExportMarkdown={() => exportMarkdown(messages, documents)}
+        onExportPdf={() => exportPdf(documents)}
       />
 
 
