@@ -76,11 +76,11 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-white border border-[#E4E2DE] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-md bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 text-[#6B6B73] hover:text-[#2B2B2E] p-2 rounded-xl hover:bg-[#F3F2F0] transition-colors cursor-pointer"
+          className="absolute top-5 right-5 text-muted hover:text-foreground p-2 rounded-xl hover:bg-surface transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -90,10 +90,10 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
           <div className="w-12 h-12 rounded-2xl bg-[#5B6CFF] mx-auto flex items-center justify-center shadow-md shadow-[#5B6CFF]/25 mb-3.5 text-white">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-bold text-[#2B2B2E] tracking-tight">
+          <h2 className="text-2xl font-bold text-foreground tracking-tight">
             {mode === "login" ? "Welcome back" : "Create an account"}
           </h2>
-          <p className="text-xs text-[#6B6B73] mt-1.5">
+          <p className="text-xs text-muted mt-1.5">
             {mode === "login"
               ? "Sign in to access your private documents and chat history"
               : "Upload and analyze your documents with private vector isolation"}
@@ -101,7 +101,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 p-1 bg-[#F3F2F0] border border-[#E4E2DE] rounded-xl mb-5">
+        <div className="grid grid-cols-2 p-1 bg-surface border border-border rounded-xl mb-5">
           <button
             type="button"
             onClick={() => {
@@ -110,8 +110,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
             }}
             className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mode === "login"
-                ? "bg-white text-[#2B2B2E] shadow-sm"
-                : "text-[#6B6B73] hover:text-[#2B2B2E]"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Sign In
@@ -124,8 +124,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
             }}
             className={`py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
               mode === "register"
-                ? "bg-white text-[#2B2B2E] shadow-sm"
-                : "text-[#6B6B73] hover:text-[#2B2B2E]"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted hover:text-foreground"
             }`}
           >
             Register
@@ -150,11 +150,11 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
         {/* Auth Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#2B2B2E] mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Email Address
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B6B73]">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
                 <Mail className="w-4 h-4" />
               </div>
               <input
@@ -163,17 +163,17 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#FAFAF9] border border-[#E4E2DE] text-[#2B2B2E] placeholder-[#6B6B73] focus:outline-none focus:border-[#5B6CFF] focus:ring-1 focus:ring-[#5B6CFF] transition-all text-sm"
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border text-foreground placeholder-muted focus:outline-none focus:border-[#5B6CFF] focus:ring-1 focus:ring-[#5B6CFF] transition-all text-sm"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#2B2B2E] mb-1.5">
+            <label className="block text-xs font-semibold text-foreground mb-1.5">
               Password
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B6B73]">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
                 <Lock className="w-4 h-4" />
               </div>
               <input
@@ -183,12 +183,12 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-11 py-3 rounded-xl bg-[#FAFAF9] border border-[#E4E2DE] text-[#2B2B2E] placeholder-[#6B6B73] focus:outline-none focus:border-[#5B6CFF] focus:ring-1 focus:ring-[#5B6CFF] transition-all text-sm"
+                className="w-full pl-10 pr-11 py-3 rounded-xl bg-background border border-border text-foreground placeholder-muted focus:outline-none focus:border-[#5B6CFF] focus:ring-1 focus:ring-[#5B6CFF] transition-all text-sm"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#6B6B73] hover:text-[#2B2B2E] cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-muted hover:text-foreground cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -215,7 +215,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
         </form>
 
         {/* Security badge note */}
-        <div className="mt-5 pt-4 border-t border-[#E4E2DE] flex items-center justify-center gap-1.5 text-[11px] text-[#6B6B73]">
+        <div className="mt-5 pt-4 border-t border-border flex items-center justify-center gap-1.5 text-[11px] text-muted">
           <ShieldCheck className="w-3.5 h-3.5 text-[#5B6CFF]" />
           <span>Secured with Supabase Auth & Row-Level Security</span>
         </div>

@@ -35,12 +35,12 @@ export function Composer({
         {documents.length > 0 && !messages.some((m) => m.sender === "user") && !generating && (
           <div className="px-4 sm:px-6 max-w-3xl mx-auto w-full pb-2">
             <div className="flex flex-wrap items-center gap-2 pb-1">
-              <span className="text-xs text-[#6B6B73] shrink-0">Try asking:</span>
+              <span className="text-xs text-muted shrink-0">Try asking:</span>
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleSend(undefined, prompt)}
-                  className="text-xs bg-white hover:bg-[#F3F2F0] border border-[#E4E2DE] hover:border-[#5B6CFF]/40 text-[#2B2B2E] py-1.5 px-3 rounded-full text-left transition-colors cursor-pointer shadow-xs"
+                  className="text-xs bg-card hover:bg-surface border border-border hover:border-[#5B6CFF]/40 text-foreground py-1.5 px-3 rounded-full text-left transition-colors cursor-pointer shadow-xs"
                 >
                   {prompt} →
                 </button>
@@ -50,15 +50,15 @@ export function Composer({
         )}
 
         {/* Input Bar */}
-        <div className="p-4 sm:p-5 border-t border-[#E4E2DE] bg-white/80 backdrop-blur-md">
+        <div className="p-4 sm:p-5 border-t border-border bg-card/80 backdrop-blur-md">
           <form onSubmit={handleSend} className="max-w-3xl mx-auto">
-            <div className="relative flex items-center bg-[#FAFAF9] border border-[#E4E2DE] focus-within:border-[#5B6CFF] rounded-2xl p-1.5 shadow-sm transition-all">
+            <div className="relative flex items-center bg-background border border-border focus-within:border-[#5B6CFF] rounded-2xl p-1.5 shadow-sm transition-all">
               <button
                 type="button"
                 onClick={openFileDialog}
                 disabled={uploading || documents.length >= MAX_DOCS}
                 title={documents.length >= MAX_DOCS ? `Limit reached (${MAX_DOCS}/${MAX_DOCS})` : "Attach document"}
-                className="p-2.5 text-[#6B6B73] hover:text-[#5B6CFF] hover:bg-white rounded-xl transition-colors cursor-pointer shrink-0 disabled:opacity-40"
+                className="p-2.5 text-muted hover:text-[#5B6CFF] hover:bg-card rounded-xl transition-colors cursor-pointer shrink-0 disabled:opacity-40"
               >
                 <Paperclip className="w-5 h-5" />
               </button>
@@ -75,7 +75,7 @@ export function Composer({
                     : "Message DocuChat AI or upload a document to get started..."
                 }
                 disabled={generating}
-                className="flex-1 bg-transparent px-3 py-2 text-sm sm:text-base text-[#2B2B2E] placeholder-[#6B6B73] focus:outline-none disabled:opacity-60"
+                className="flex-1 bg-transparent px-3 py-2 text-sm sm:text-base text-foreground placeholder-muted focus:outline-none disabled:opacity-60"
               />
 
               {generating ? (
@@ -91,13 +91,13 @@ export function Composer({
                 <button
                   type="submit"
                   disabled={!message.trim()}
-                  className="p-2.5 bg-[#5B6CFF] hover:bg-[#4a5be8] disabled:bg-[#E4E2DE] text-white disabled:text-[#6B6B73] rounded-xl transition-all disabled:cursor-not-allowed cursor-pointer shrink-0"
+                  className="p-2.5 bg-[#5B6CFF] hover:bg-[#4a5be8] disabled:bg-border text-white disabled:text-muted rounded-xl transition-all disabled:cursor-not-allowed cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </button>
               )}
             </div>
-            <div className="flex items-center justify-between text-[11px] text-[#6B6B73] px-2 pt-2">
+            <div className="flex items-center justify-between text-[11px] text-muted px-2 pt-2">
               <span>Press Enter to send • Drag & drop anywhere</span>
               {currentDocument && <span className="truncate max-w-[200px]">Active: {currentDocument}</span>}
             </div>

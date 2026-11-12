@@ -9,6 +9,7 @@ import { authFetch } from "@/src/lib/auth-fetch";
 import { exportMarkdown, exportPdf } from "@/src/lib/export-chat";
 import { LandingPage } from "@/app/components/LandingPage";
 import { AuthModal } from "@/app/components/AuthModal";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { Sidebar } from "@/app/components/chat/Sidebar";
 import { MessageList } from "@/app/components/chat/MessageList";
 import { Composer } from "@/app/components/chat/Composer";
@@ -632,7 +633,7 @@ export default function Home() {
 
   if (authChecking) {
     return (
-      <div className="h-screen bg-[#FAFAF9] flex items-center justify-center text-[#6B6B73]">
+      <div className="h-screen bg-background flex items-center justify-center text-muted">
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 text-[#5B6CFF] animate-spin" />
           <span className="text-sm font-medium">Loading DocuChat AI...</span>
@@ -670,18 +671,18 @@ export default function Home() {
   return (
     <div
       {...getRootProps()}
-      className="flex h-screen bg-[#FAFAF9] text-[#2B2B2E] overflow-hidden font-sans relative"
+      className="flex h-screen bg-background text-foreground overflow-hidden font-sans relative"
     >
       <input {...getInputProps()} />
 
       {/* Drag & Drop Visual Overlay */}
       {isDragActive && (
-        <div className="absolute inset-0 z-50 bg-[#E8EAFF]/90 backdrop-blur-sm border-2 border-dashed border-[#5B6CFF] flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-150">
+        <div className="absolute inset-0 z-50 bg-user-bubble/90 backdrop-blur-sm border-2 border-dashed border-[#5B6CFF] flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-150">
           <div className="p-4 rounded-2xl bg-[#5B6CFF]/15 border border-[#5B6CFF]/30 text-[#5B6CFF] mb-3 animate-bounce">
             <Upload className="w-10 h-10" />
           </div>
-          <p className="text-xl font-bold text-[#2B2B2E]">Drop your document here</p>
-          <p className="text-xs text-[#6B6B73] mt-1">PDF, TXT, DOC, DOCX up to 4.5MB</p>
+          <p className="text-xl font-bold text-foreground">Drop your document here</p>
+          <p className="text-xs text-muted mt-1">PDF, TXT, DOC, DOCX up to 4.5MB</p>
         </div>
       )}
 
@@ -718,20 +719,20 @@ export default function Home() {
 
 
       {/* Main Chat Panel */}
-      <main className="flex-1 flex flex-col bg-[#FAFAF9] relative">
+      <main className="flex-1 flex flex-col bg-background relative">
         {/* Header Bar */}
-        <header className="h-16 border-b border-[#E4E2DE] bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0">
+        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="sm:hidden p-2 rounded-lg text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-[#F3F2F0] cursor-pointer"
+              className="sm:hidden p-2 rounded-lg text-muted hover:text-foreground hover:bg-surface cursor-pointer"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-[#2B2B2E] text-sm sm:text-base">Document Assistant</h2>
+                <h2 className="font-semibold text-foreground text-sm sm:text-base">Document Assistant</h2>
                 {documents.length > 0 ? (
                   <button
                     onClick={() => handleViewDocument()}
@@ -744,12 +745,12 @@ export default function Home() {
                   </button>
                 ) : null}
               </div>
-              <p className="text-xs text-[#6B6B73]">RAG Semantic Search & Q&A</p>
+              <p className="text-xs text-muted">RAG Semantic Search & Q&A</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E4E2DE] text-xs font-medium text-[#2B2B2E] shadow-xs">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-foreground shadow-xs">
               <span className={`w-2 h-2 rounded-full ${documents.length > 0 ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`} />
               <span>
                 {documents.length === 1
@@ -759,6 +760,7 @@ export default function Home() {
                   : "General Chat Mode"}
               </span>
             </div>
+            <ThemeToggle />
           </div>
         </header>
 

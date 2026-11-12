@@ -9,9 +9,29 @@
   --accent: #5B6CFF;
   --accent-hover: #4a5be8;
   --user-bubble: #E8EAFF;
+  --card: #FFFFFF;
+  --heading: #1F1F23;
+  --accent-strong: #2435b8;
+}
+
+/* Dark theme: toggled by the `dark` class on <html> (see ThemeToggle + the script in layout.tsx) */
+.dark {
+  color-scheme: dark;
+  --background: #131316;
+  --surface: #232328;
+  --border: #35353d;
+  --foreground: #E8E8EC;
+  --muted: #9A9AA6;
+  --user-bubble: #2A2F5C;
+  --card: #1C1C21;
+  --heading: #F4F4F6;
+  --accent-strong: #AEB8FF;
 }
 
 @theme inline {
+  --color-card: var(--card);
+  --color-heading: var(--heading);
+  --color-accent-strong: var(--accent-strong);
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-border: var(--border);

@@ -75,8 +75,8 @@ export function DocModal({
 
   return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#2B2B2E]/40 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="w-full max-w-5xl h-[92vh] bg-white border border-[#E4E2DE] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-[#E4E2DE] shrink-0">
+          <div className="w-full max-w-5xl h-[92vh] bg-card border border-border rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-border shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-[#5B6CFF]/10 text-[#5B6CFF] flex items-center justify-center shrink-0 border border-[#5B6CFF]/20">
                   <FileText className="w-5 h-5" />
@@ -90,7 +90,7 @@ export function DocModal({
                           const selected = documents.find((d) => d.name === e.target.value);
                           if (selected) handleViewDocument(selected);
                         }}
-                        className="text-xs sm:text-sm font-semibold text-[#2B2B2E] bg-[#F3F2F0] hover:bg-[#E4E2DE] border border-[#E4E2DE] rounded-xl px-2.5 py-1 cursor-pointer focus:outline-none max-w-[260px] truncate"
+                        className="text-xs sm:text-sm font-semibold text-foreground bg-surface hover:bg-border border border-border rounded-xl px-2.5 py-1 cursor-pointer focus:outline-none max-w-[260px] truncate"
                       >
                         {documents.map((d) => (
                           <option key={d.id} value={d.name}>
@@ -100,23 +100,23 @@ export function DocModal({
                       </select>
                     </div>
                   ) : (
-                    <h3 className="text-sm sm:text-base font-semibold text-[#2B2B2E] truncate" title={currentDocument || "Document"}>
+                    <h3 className="text-sm sm:text-base font-semibold text-foreground truncate" title={currentDocument || "Document"}>
                       {currentDocument || "Uploaded Document"}
                     </h3>
                   )}
-                  <p className="text-[11px] text-[#6B6B73]">Visual document viewer</p>
+                  <p className="text-[11px] text-muted">Visual document viewer</p>
                 </div>
               </div>
 
               {/* View Toggle Tabs */}
-              <div className="flex items-center gap-1 p-1 bg-[#F3F2F0] rounded-xl border border-[#E4E2DE]">
+              <div className="flex items-center gap-1 p-1 bg-surface rounded-xl border border-border">
                 <button
                   type="button"
                   onClick={() => setDocModalTab("visual")}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     docModalTab === "visual"
-                      ? "bg-white text-[#2B2B2E] shadow-xs"
-                      : "text-[#6B6B73] hover:text-[#2B2B2E]"
+                      ? "bg-card text-foreground shadow-xs"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
@@ -127,8 +127,8 @@ export function DocModal({
                   onClick={() => setDocModalTab("text")}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     docModalTab === "text"
-                      ? "bg-white text-[#2B2B2E] shadow-xs"
-                      : "text-[#6B6B73] hover:text-[#2B2B2E]"
+                      ? "bg-card text-foreground shadow-xs"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -143,7 +143,7 @@ export function DocModal({
                       href={docUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3F2F0] hover:bg-[#E4E2DE] text-xs font-medium text-[#2B2B2E] transition-colors"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface hover:bg-border text-xs font-medium text-foreground transition-colors"
                       title="Open in new tab"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -152,7 +152,7 @@ export function DocModal({
                     <a
                       href={docUrl}
                       download={currentDocument || "document"}
-                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3F2F0] hover:bg-[#E4E2DE] text-xs font-medium text-[#2B2B2E] transition-colors"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface hover:bg-border text-xs font-medium text-foreground transition-colors"
                       title="Download file"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -162,7 +162,7 @@ export function DocModal({
                 )}
                 <button
                   onClick={() => setShowDocModal(false)}
-                  className="p-2 text-[#6B6B73] hover:text-[#2B2B2E] rounded-xl hover:bg-[#F3F2F0] transition-colors cursor-pointer"
+                  className="p-2 text-muted hover:text-foreground rounded-xl hover:bg-surface transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -174,13 +174,13 @@ export function DocModal({
               <div className="pt-3 shrink-0">
                 <form onSubmit={runSearch} className="flex items-center gap-2">
                   <div className="relative flex-1">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B6B73]" />
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                     <input
                       type="text"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search in this document..."
-                      className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#FAFAF9] border border-[#E4E2DE] focus:border-[#5B6CFF] focus:outline-none text-xs text-[#2B2B2E] placeholder-[#6B6B73]"
+                      className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-background border border-border focus:border-[#5B6CFF] focus:outline-none text-xs text-foreground placeholder-muted"
                     />
                   </div>
                   <button
@@ -194,9 +194,9 @@ export function DocModal({
                 </form>
                 {searchError && <p className="text-[11px] text-red-600 pt-1.5">{searchError}</p>}
                 {results && (
-                  <div className="mt-2 max-h-36 overflow-y-auto rounded-xl border border-[#E4E2DE] bg-white divide-y divide-[#E4E2DE]/70">
+                  <div className="mt-2 max-h-36 overflow-y-auto rounded-xl border border-border bg-card divide-y divide-border/70">
                     {results.length === 0 ? (
-                      <p className="p-2.5 text-[11px] text-[#6B6B73]">No matches for &quot;{query.trim()}&quot;.</p>
+                      <p className="p-2.5 text-[11px] text-muted">No matches for &quot;{query.trim()}&quot;.</p>
                     ) : (
                       results.map((r, i) => {
                         const body = (
@@ -204,7 +204,7 @@ export function DocModal({
                             <span className="shrink-0 px-1.5 py-0.5 rounded bg-[#5B6CFF]/10 text-[#5B6CFF] text-[10px] font-semibold">
                               {r.page ? `p.${r.page}` : "—"}
                             </span>
-                            <span className="text-[11px] text-[#2B2B2E] leading-snug">{highlight(r.snippet)}</span>
+                            <span className="text-[11px] text-foreground leading-snug">{highlight(r.snippet)}</span>
                           </>
                         );
                         return r.page ? (
@@ -215,7 +215,7 @@ export function DocModal({
                               setDocModalTab("visual");
                               onGoToPage(r.page);
                             }}
-                            className="w-full flex items-start gap-2 p-2 text-left hover:bg-[#F3F2F0] cursor-pointer"
+                            className="w-full flex items-start gap-2 p-2 text-left hover:bg-surface cursor-pointer"
                             title={`Go to page ${r.page}`}
                           >
                             {body}
@@ -232,9 +232,9 @@ export function DocModal({
               </div>
             )}
 
-            <div className="flex-1 my-3 overflow-hidden rounded-2xl bg-[#FAFAF9] border border-[#E4E2DE] flex flex-col">
+            <div className="flex-1 my-3 overflow-hidden rounded-2xl bg-background border border-border flex flex-col">
               {docLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-[#6B6B73]">
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted">
                   <Loader2 className="w-7 h-7 text-[#5B6CFF] animate-spin" />
                   <span className="font-sans text-xs font-medium">Loading document viewer...</span>
                 </div>
@@ -254,11 +254,11 @@ export function DocModal({
                       />
                     </object>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[#6B6B73] gap-3">
+                    <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted gap-3">
                       <AlertTriangle className="w-8 h-8 text-amber-500" />
                       <div>
-                        <p className="text-sm font-semibold text-[#2B2B2E]">Unable to generate visual PDF link</p>
-                        <p className="text-xs text-[#6B6B73] mt-1">Please try re-opening or check the extracted text tab.</p>
+                        <p className="text-sm font-semibold text-foreground">Unable to generate visual PDF link</p>
+                        <p className="text-xs text-muted mt-1">Please try re-opening or check the extracted text tab.</p>
                       </div>
                       <button
                         onClick={() => handleViewDocument()}
@@ -275,7 +275,7 @@ export function DocModal({
                 ) : docUrl && /\.(txt|docx?)$/i.test(currentDocument || "") ? (
                   <FileViewer key={docUrl} url={docUrl} name={currentDocument!} fallbackText={docText} />
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[#6B6B73] text-xs">
+                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-muted text-xs">
                     Preview not available for this file type.
                   </div>
                 )
@@ -284,14 +284,14 @@ export function DocModal({
                   <div className="p-3 bg-amber-50/80 border-b border-amber-200/60 text-[11px] text-amber-800 flex items-center justify-between">
                     <span>Parsed text representation used by AI indexing:</span>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-[#2B2B2E] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text bg-white">
+                  <div className="flex-1 overflow-y-auto p-4 sm:p-5 text-foreground text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text bg-card">
                     {docText || "No text available for this document."}
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-2 text-xs text-[#6B6B73] shrink-0">
+            <div className="flex items-center justify-between pt-2 text-xs text-muted shrink-0">
               <span className="truncate max-w-[250px]">{currentDocument}</span>
               <button
                 onClick={() => setShowDocModal(false)}

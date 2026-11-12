@@ -48,22 +48,22 @@ export function FileViewer({ url, name, fallbackText }: { url: string; name: str
     return (
       <iframe
         src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`}
-        className="w-full h-full border-0 bg-white"
+        className="w-full h-full border-0 bg-card"
         title="Document preview"
       />
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-white relative">
+    <div className="flex-1 overflow-auto bg-card relative">
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-card/80 z-10">
           <Loader2 className="w-7 h-7 text-[#5B6CFF] animate-spin" />
         </div>
       )}
       {ext === "docx" && !failed && <div ref={box} className="docx-viewer" />}
       {asText && (
-        <div className="p-5 text-[#2B2B2E] text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
+        <div className="p-5 text-foreground text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
           {showText || "No content found in this file."}
         </div>
       )}

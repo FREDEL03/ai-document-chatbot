@@ -30,13 +30,13 @@ export function ConfirmDialogs({
 <>
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 mx-auto rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#2B2B2E]">Clear entire conversation?</h3>
-              <p className="text-xs text-[#6B6B73] mt-1">
+              <h3 className="text-base font-semibold text-foreground">Clear entire conversation?</h3>
+              <p className="text-xs text-muted mt-1">
                 This will reset your current chat messages. Your uploaded document will remain loaded.
               </p>
             </div>
@@ -44,7 +44,7 @@ export function ConfirmDialogs({
               <button
                 type="button"
                 onClick={() => setShowClearConfirm(false)}
-                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
+                className="py-2.5 px-4 rounded-xl border border-border bg-surface hover:bg-card text-xs font-semibold text-foreground transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -63,13 +63,13 @@ export function ConfirmDialogs({
       {/* Sign Out Confirmation Dialog */}
       {showSignOutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
               <LogOut className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#2B2B2E]">Sign out of DocuChat AI?</h3>
-              <p className="text-xs text-[#6B6B73] mt-1">
+              <h3 className="text-base font-semibold text-foreground">Sign out of DocuChat AI?</h3>
+              <p className="text-xs text-muted mt-1">
                 You will need to sign back in to access your uploaded documents and chats.
               </p>
             </div>
@@ -78,7 +78,7 @@ export function ConfirmDialogs({
                 type="button"
                 disabled={signingOut}
                 onClick={() => setShowSignOutConfirm(false)}
-                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer disabled:opacity-50"
+                className="py-2.5 px-4 rounded-xl border border-border bg-surface hover:bg-card text-xs font-semibold text-foreground transition-colors cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -105,21 +105,21 @@ export function ConfirmDialogs({
       {/* Delete Single File Confirmation Dialog */}
       {fileToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
               <Trash2 className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#2B2B2E]">Remove uploaded file?</h3>
-              <p className="text-xs text-[#6B6B73] mt-1 break-all">
-                Are you sure you want to remove <span className="font-semibold text-[#2B2B2E]">"{fileToDelete.name}"</span>?
+              <h3 className="text-base font-semibold text-foreground">Remove uploaded file?</h3>
+              <p className="text-xs text-muted mt-1 break-all">
+                Are you sure you want to remove <span className="font-semibold text-foreground">"{fileToDelete.name}"</span>?
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setFileToDelete(null)}
-                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
+                className="py-2.5 px-4 rounded-xl border border-border bg-surface hover:bg-card text-xs font-semibold text-foreground transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -138,13 +138,13 @@ export function ConfirmDialogs({
       {/* Clear All Files Confirmation Dialog */}
       {showClearFilesConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
               <AlertTriangle className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#2B2B2E]">Clear all uploaded files?</h3>
-              <p className="text-xs text-[#6B6B73] mt-1">
+              <h3 className="text-base font-semibold text-foreground">Clear all uploaded files?</h3>
+              <p className="text-xs text-muted mt-1">
                 All {documents.length} active documents will be removed. The assistant will switch to general chat mode.
               </p>
             </div>
@@ -152,7 +152,7 @@ export function ConfirmDialogs({
               <button
                 type="button"
                 onClick={() => setShowClearFilesConfirm(false)}
-                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
+                className="py-2.5 px-4 rounded-xl border border-border bg-surface hover:bg-card text-xs font-semibold text-foreground transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -171,13 +171,13 @@ export function ConfirmDialogs({
       {/* Delete Conversation Confirmation Dialog */}
       {convoToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2B2B2E]/40 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-2xl border border-[#E4E2DE] bg-white p-6 shadow-2xl text-center space-y-4">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 mx-auto rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center">
               <Trash2 className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-[#2B2B2E]">Delete conversation?</h3>
-              <p className="text-xs text-[#6B6B73] mt-1">
+              <h3 className="text-base font-semibold text-foreground">Delete conversation?</h3>
+              <p className="text-xs text-muted mt-1">
                 This conversation will be permanently removed from your chat history.
               </p>
             </div>
@@ -185,7 +185,7 @@ export function ConfirmDialogs({
               <button
                 type="button"
                 onClick={() => setConvoToDelete(null)}
-                className="py-2.5 px-4 rounded-xl border border-[#E4E2DE] bg-[#F3F2F0] hover:bg-white text-xs font-semibold text-[#2B2B2E] transition-colors cursor-pointer"
+                className="py-2.5 px-4 rounded-xl border border-border bg-surface hover:bg-card text-xs font-semibold text-foreground transition-colors cursor-pointer"
               >
                 Cancel
               </button>

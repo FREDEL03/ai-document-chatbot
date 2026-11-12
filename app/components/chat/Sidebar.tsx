@@ -45,40 +45,40 @@ export function Sidebar({
 
   return (
       <aside
-        className={`fixed sm:static inset-y-0 left-0 z-50 w-72 bg-[#F3F2F0] border-r border-[#E4E2DE] flex flex-col transition-transform duration-200 ease-in-out shrink-0 ${
+        className={`fixed sm:static inset-y-0 left-0 z-50 w-72 bg-surface border-r border-border flex flex-col transition-transform duration-200 ease-in-out shrink-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
         }`}
       >
         {/* Brand / Logo */}
-        <div className="p-5 border-b border-[#E4E2DE] flex items-center justify-between bg-white/50">
+        <div className="p-5 border-b border-border flex items-center justify-between bg-card/50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#5B6CFF] flex items-center justify-center shadow-md shadow-[#5B6CFF]/20 text-white">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-bold text-lg text-[#2B2B2E] tracking-tight">DocuChat AI</h1>
-              <p className="text-xs text-[#6B6B73] font-medium truncate max-w-[140px]">{user.email}</p>
+              <h1 className="font-bold text-lg text-foreground tracking-tight">DocuChat AI</h1>
+              <p className="text-xs text-muted font-medium truncate max-w-[140px]">{user.email}</p>
             </div>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="sm:hidden text-[#6B6B73] hover:text-[#2B2B2E] p-1 cursor-pointer"
+            className="sm:hidden text-muted hover:text-foreground p-1 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Action Buttons: New Chat & Upload */}
-        <div className="p-3.5 space-y-2 border-b border-[#E4E2DE] bg-white/40">
+        <div className="p-3.5 space-y-2 border-b border-border bg-card/40">
           <button
             onClick={handleNewChat}
-            className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-[#FAFAF9] text-[#2B2B2E] border border-[#E4E2DE] hover:border-[#5B6CFF]/40 font-semibold text-xs shadow-xs transition-all flex items-center justify-between cursor-pointer group"
+            className="w-full py-2.5 px-3 rounded-xl bg-card hover:bg-background text-foreground border border-border hover:border-[#5B6CFF]/40 font-semibold text-xs shadow-xs transition-all flex items-center justify-between cursor-pointer group"
           >
             <span className="flex items-center gap-2">
               <Plus className="w-4 h-4 text-[#5B6CFF] group-hover:rotate-90 transition-transform duration-200" />
               <span>New Chat</span>
             </span>
-            <span className="text-[10px] bg-[#F3F2F0] text-[#6B6B73] px-1.5 py-0.5 rounded font-mono">Clean</span>
+            <span className="text-[10px] bg-surface text-muted px-1.5 py-0.5 rounded font-mono">Clean</span>
           </button>
 
           <button
@@ -102,7 +102,7 @@ export function Sidebar({
               </>
             )}
           </button>
-          <p className="text-[10px] text-[#6B6B73] text-center">
+          <p className="text-[10px] text-muted text-center">
             PDF, TXT, DOC, DOCX • max {MAX_DOCS} files (4.5MB ea)
           </p>
         </div>
@@ -112,7 +112,7 @@ export function Sidebar({
           {/* Section: Uploaded Documents */}
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B6B73]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
                 Uploaded Files ({documents.length}/{MAX_DOCS})
               </span>
               {documents.length > 0 && (
@@ -132,14 +132,14 @@ export function Sidebar({
                 {documents.map((doc) => (
                   <div
                     key={doc.id}
-                    className="p-2.5 rounded-xl bg-white border border-[#E4E2DE] shadow-xs flex items-center justify-between gap-2 hover:border-[#5B6CFF]/30 transition-all group"
+                    className="p-2.5 rounded-xl bg-card border border-border shadow-xs flex items-center justify-between gap-2 hover:border-[#5B6CFF]/30 transition-all group"
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <div className="w-7 h-7 rounded-lg bg-[#5B6CFF]/10 text-[#5B6CFF] flex items-center justify-center shrink-0">
                         <FileText className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-[#2B2B2E] truncate" title={doc.name}>
+                        <p className="text-xs font-semibold text-foreground truncate" title={doc.name}>
                           {doc.name}
                         </p>
                         <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
@@ -161,7 +161,7 @@ export function Sidebar({
                       <button
                         type="button"
                         onClick={() => handleRemoveDocument(doc.id, doc.name)}
-                        className="p-1 text-[#6B6B73] hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                        className="p-1 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
                         title="Remove this document"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -173,40 +173,40 @@ export function Sidebar({
             ) : (
               <div
                 onClick={openFileDialog}
-                className="p-3 rounded-xl border border-dashed border-[#E4E2DE] text-center space-y-1 bg-white/60 hover:bg-white hover:border-[#5B6CFF]/40 transition-all cursor-pointer"
+                className="p-3 rounded-xl border border-dashed border-border text-center space-y-1 bg-card/60 hover:bg-card hover:border-[#5B6CFF]/40 transition-all cursor-pointer"
               >
-                <div className="w-7 h-7 mx-auto rounded-full bg-[#F3F2F0] flex items-center justify-center text-[#6B6B73]">
+                <div className="w-7 h-7 mx-auto rounded-full bg-surface flex items-center justify-center text-muted">
                   <FileText className="w-3.5 h-3.5" />
                 </div>
-                <p className="text-xs font-medium text-[#2B2B2E]">No files attached</p>
-                <p className="text-[10px] text-[#6B6B73]">General chat mode. Click to attach up to {MAX_DOCS} files.</p>
+                <p className="text-xs font-medium text-foreground">No files attached</p>
+                <p className="text-[10px] text-muted">General chat mode. Click to attach up to {MAX_DOCS} files.</p>
               </div>
             )}
           </div>
 
           {/* Section: Chat History */}
-          <div className="space-y-2 pt-2 border-t border-[#E4E2DE]">
+          <div className="space-y-2 pt-2 border-t border-border">
             <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B6B73]">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
                 Chat History ({conversations.length})
               </span>
             </div>
 
             {conversations.length > 0 && (
               <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B6B73]" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   value={historyQuery}
                   onChange={(e) => setHistoryQuery(e.target.value)}
                   placeholder="Search chats..."
-                  className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-white border border-[#E4E2DE] focus:border-[#5B6CFF] focus:outline-none text-xs text-[#2B2B2E] placeholder-[#6B6B73]"
+                  className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-card border border-border focus:border-[#5B6CFF] focus:outline-none text-xs text-foreground placeholder-muted"
                 />
                 {historyQuery && (
                   <button
                     type="button"
                     onClick={() => setHistoryQuery("")}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-[#6B6B73] hover:text-[#2B2B2E] cursor-pointer"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-muted hover:text-foreground cursor-pointer"
                     title="Clear search"
                   >
                     <X className="w-3 h-3" />
@@ -216,11 +216,11 @@ export function Sidebar({
             )}
 
             {conversations.length === 0 ? (
-              <div className="px-2 py-3 text-center text-[11px] text-[#6B6B73] bg-white/40 rounded-xl border border-dashed border-[#E4E2DE]">
+              <div className="px-2 py-3 text-center text-[11px] text-muted bg-card/40 rounded-xl border border-dashed border-border">
                 No previous conversations
               </div>
             ) : matches.length === 0 ? (
-              <div className="px-2 py-3 text-center text-[11px] text-[#6B6B73] bg-white/40 rounded-xl border border-dashed border-[#E4E2DE]">
+              <div className="px-2 py-3 text-center text-[11px] text-muted bg-card/40 rounded-xl border border-dashed border-border">
                 No chats match &quot;{historyQuery}&quot;
               </div>
             ) : (
@@ -231,26 +231,26 @@ export function Sidebar({
                     onClick={() => handleSelectConversation(convo)}
                     className={`w-full p-2.5 rounded-xl text-left text-xs transition-all flex items-center justify-between gap-2 cursor-pointer group ${
                       currentConvoId === convo.id
-                        ? "bg-white border border-[#5B6CFF]/30 text-[#2B2B2E] shadow-xs font-semibold"
-                        : "hover:bg-white/70 text-[#6B6B73] hover:text-[#2B2B2E]"
+                        ? "bg-card border border-[#5B6CFF]/30 text-foreground shadow-xs font-semibold"
+                        : "hover:bg-card/70 text-muted hover:text-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <MessageSquare
                         className={`w-3.5 h-3.5 shrink-0 ${
-                          currentConvoId === convo.id ? "text-[#5B6CFF]" : "text-[#6B6B73]"
+                          currentConvoId === convo.id ? "text-[#5B6CFF]" : "text-muted"
                         }`}
                       />
                       <div className="min-w-0">
                         <span className="block truncate">{convo.title || "Conversation"}</span>
-                        {snippet && <span className="block truncate text-[10px] font-normal text-[#6B6B73]">{snippet}</span>}
+                        {snippet && <span className="block truncate text-[10px] font-normal text-muted">{snippet}</span>}
                       </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={(e) => handleDeleteConversation(convo.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-[#6B6B73] hover:text-red-600 rounded-md hover:bg-red-50 transition-all cursor-pointer shrink-0"
+                      className="opacity-0 group-hover:opacity-100 p-1 text-muted hover:text-red-600 rounded-md hover:bg-red-50 transition-all cursor-pointer shrink-0"
                       title="Delete conversation"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -263,13 +263,13 @@ export function Sidebar({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-3.5 border-t border-[#E4E2DE] space-y-1.5 bg-white/50">
+        <div className="p-3.5 border-t border-border space-y-1.5 bg-card/50">
           <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={onExportMarkdown}
               disabled={!canExport}
               title="Download this chat as a Markdown file"
-              className="py-2 px-2 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-2 px-2 rounded-lg text-xs font-medium text-muted hover:text-foreground hover:bg-card transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5" />
               Markdown
@@ -278,7 +278,7 @@ export function Sidebar({
               onClick={onExportPdf}
               disabled={!canExport}
               title="Save this chat as PDF (opens the print dialog)"
-              className="py-2 px-2 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="py-2 px-2 rounded-lg text-xs font-medium text-muted hover:text-foreground hover:bg-card transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5" />
               PDF
@@ -287,7 +287,7 @@ export function Sidebar({
 
           <button
             onClick={() => setShowClearConfirm(true)}
-            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-[#6B6B73] hover:text-[#2B2B2E] hover:bg-white transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-muted hover:text-foreground hover:bg-card transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             Clear Current Messages
