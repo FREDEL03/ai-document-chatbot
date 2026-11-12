@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { chunkText } from "@/src/lib/chunk-text";
 import { readImages } from "@/src/lib/read-images";
+import { embedTexts } from "@/src/lib/embed";
 
 export const maxDuration = 60;
 
@@ -176,10 +177,13 @@ export async function POST(request: NextRequest) {
 
       // Insert chunks into document_chunks table
       if (chunks.length > 0) {
+        // Embeddings power semantic retrieval in chat; null just means "use fallback"
+        const vectors = await embedTexts(chunks, "RETRIEVAL_DOCUMENT");
         const chunkRecords = chunks.map((content, index) => ({
           document_id: documentId,
           chunk_index: index,
           content,
+          embedding: vectors ? JSON.stringify(vectors[index]) : null,
           metadata: { source: file.name },
         }));
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
+import { embedTexts } from "@/src/lib/embed";
 
 export const maxDuration = 30;
 
@@ -137,6 +138,8 @@ export async function POST(request: NextRequest) {
     // Retrieve document content from Supabase for all selected documents
     let docContext = "";
     if (docItems.length > 0) {
+      const queryVec = (await embedTexts([trimmed], "RETRIEVAL_QUERY"))?.[0] ?? null;
+      const topK = Math.max(4, Math.floor(12 / Math.min(docItems.length, 5)));
       try {
         const supabaseAdmin = getSupabaseAdmin();
         const docContextParts: string[] = [];
@@ -169,12 +172,28 @@ export async function POST(request: NextRequest) {
               if (meta?.original_name) docTitle = meta.original_name;
             }
 
-            const { data: chunks } = await supabaseAdmin
-              .from("document_chunks")
-              .select("content")
-              .eq("document_id", targetId)
-              .order("chunk_index", { ascending: true })
-              .limit(20);
+            // Semantic retrieval: only the chunks closest to the question.
+            // Falls back to the first 20 chunks when embeddings/RPC are unavailable.
+            let chunks: { content: string }[] | null = null;
+            if (queryVec) {
+              const { data: matches } = await supabaseAdmin.rpc("match_chunks", {
+                query_embedding: JSON.stringify(queryVec),
+                doc_ids: [targetId],
+                match_count: topK,
+              });
+              if (matches?.length) {
+                chunks = [...matches].sort((a: any, b: any) => a.chunk_index - b.chunk_index);
+              }
+            }
+            if (!chunks) {
+              const { data } = await supabaseAdmin
+                .from("document_chunks")
+                .select("content")
+                .eq("document_id", targetId)
+                .order("chunk_index", { ascending: true })
+                .limit(20);
+              chunks = data;
+            }
 
             let content = "";
             if (chunks && chunks.length > 0) {
