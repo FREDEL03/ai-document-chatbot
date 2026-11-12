@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     const filePath = filename; // store at root of bucket
 
     // Upload to Supabase Storage bucket "documents"
-    const { data: storageData, error: storageError } = await supabaseAdmin.storage
+    const { error: storageError } = await supabaseAdmin.storage
       .from("documents")
       .upload(filePath, buffer, {
         contentType: file.type,
@@ -148,7 +148,14 @@ export async function POST(request: NextRequest) {
       // Plain text
       extractedText = buffer.toString("utf8").replace(/\s+/g, " ").trim();
     }
-    // TODO: handle DOC/DOCX (would need mammoth or similar)
+    else if (file.type.includes("wordprocessingml")) {
+      const mammoth = await import("mammoth");
+      extractedText = (await mammoth.extractRawText({ buffer })).value.replace(/\s+/g, " ").trim();
+    } else if (file.type === "application/msword") {
+      // @ts-expect-error no types
+      const { default: WordExtractor } = await import("word-extractor");
+      extractedText = (await new WordExtractor().extract(buffer)).getBody().replace(/\s+/g, " ").trim();
+    }
 
     // If text extracted, chunk and save chunks
     if (extractedText) {
