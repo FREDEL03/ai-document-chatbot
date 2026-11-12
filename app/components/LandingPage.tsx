@@ -41,6 +41,9 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-10%,rgba(91,108,255,0.08),rgba(255,255,255,0))] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-40 pointer-events-none" />
 
+      <div className="blob absolute -top-24 -left-24 w-96 h-96 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+      <div className="blob absolute top-40 -right-24 w-80 h-80 rounded-full bg-accent/10 blur-3xl pointer-events-none [animation-delay:-6s]" />
+
       {/* Floating Header */}
       <header className="sticky top-0 z-40 w-full px-4 sm:px-8 lg:px-12 pt-4 pb-3">
         <div className="max-w-6xl mx-auto h-16 sm:h-20 px-6 sm:px-8 rounded-2xl sm:rounded-3xl border border-border bg-card/80 backdrop-blur-xl shadow-sm flex items-center justify-between transition-all">
@@ -117,30 +120,30 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
       {/* Hero Section */}
       <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 flex flex-col items-center justify-center text-center relative z-10">
         {/* Modern Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card border border-border text-xs text-muted mb-6 sm:mb-8 shadow-xs">
+        <div style={{ animationDelay: "0ms" }} className="fade-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card border border-border text-xs text-muted mb-6 sm:mb-8 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-accent" />
           <span className="font-medium text-foreground">Powered by Gemini AI & Supabase Vector RAG</span>
           <ChevronRight className="w-3.5 h-3.5 text-muted" />
         </div>
 
         {/* Headline */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground max-w-4xl leading-[1.1]">
+        <h1 style={{ animationDelay: "120ms" }} className="fade-up text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground max-w-4xl leading-[1.1]">
           Chat with your documents in{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent-strong">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-accent-strong to-accent bg-[length:200%_auto] shimmer">
             natural clarity.
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-5 sm:mt-7 text-base sm:text-lg lg:text-xl text-muted max-w-2xl leading-relaxed">
+        <p style={{ animationDelay: "240ms" }} className="fade-up mt-5 sm:mt-7 text-base sm:text-lg lg:text-xl text-muted max-w-2xl leading-relaxed">
           Upload PDFs, Word, Excel, slides, images or even a webpage link. Ask questions by typing or voice, and get answers that cite the exact page.
         </p>
 
         {/* CTA Buttons */}
-        <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto">
+        <div style={{ animationDelay: "360ms" }} className="fade-up mt-8 sm:mt-10 flex flex-col sm:flex-row items-center gap-3.5 w-full sm:w-auto">
           <button
             onClick={onGetStarted}
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-accent hover:bg-accent-hover text-white font-semibold text-base shadow-lg shadow-accent/25 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2.5"
+            className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-accent hover:bg-accent-hover text-white font-semibold text-base shadow-lg shadow-accent/25 active:scale-95 hover:-translate-y-0.5 hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2.5"
           >
             <span>Start Chatting Now</span>
             <ArrowRight className="w-5 h-5" />
@@ -154,7 +157,7 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
         </div>
 
         {/* Trust Badges */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-muted">
+        <div style={{ animationDelay: "480ms" }} className="fade-up mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-muted">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             <span>Free to Use</span>
@@ -170,7 +173,7 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
         </div>
 
         {/* Mockup Preview Window */}
-        <div className="mt-14 sm:mt-20 w-full max-w-3xl rounded-3xl bg-card border border-border shadow-xl shadow-black/5 p-4 sm:p-6 text-left relative overflow-hidden">
+        <div style={{ animationDelay: "600ms" }} className="fade-up mt-14 sm:mt-20 w-full max-w-3xl float rounded-3xl bg-card border border-border shadow-xl shadow-black/5 p-4 sm:p-6 text-left relative overflow-hidden">
           {/* Window Header */}
           <div className="flex items-center justify-between pb-4 border-b border-border">
             <div className="flex items-center gap-2">
@@ -223,8 +226,8 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-left">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="p-6 rounded-2xl bg-card border border-border shadow-xs hover:border-accent/40 hover:-translate-y-0.5 transition-all">
-                <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center mb-4">
+              <div key={title} className="group p-6 rounded-2xl bg-card border border-border shadow-xs hover:border-accent/40 hover:-translate-y-0.5 transition-all">
+                <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center mb-4 transition-transform group-hover:scale-110 group-hover:-rotate-6">
                   <Icon className="w-5 h-5" />
                 </div>
                 <h3 className="text-base font-semibold text-foreground mb-1.5">{title}</h3>
@@ -280,7 +283,7 @@ export function LandingPage({ onGetStarted, onLoginClick }: LandingPageProps) {
           <p className="text-sm sm:text-base text-muted mt-3">Create a free account and start chatting with your documents in under a minute.</p>
           <button
             onClick={onGetStarted}
-            className="mt-7 px-8 py-4 rounded-2xl bg-accent hover:bg-accent-hover text-white font-semibold text-base shadow-lg shadow-accent/25 active:scale-95 transition-all cursor-pointer inline-flex items-center gap-2.5"
+            className="mt-7 px-8 py-4 rounded-2xl bg-accent hover:bg-accent-hover text-white font-semibold text-base shadow-lg shadow-accent/25 active:scale-95 hover:-translate-y-0.5 hover:shadow-xl transition-all cursor-pointer inline-flex items-center gap-2.5"
           >
             <span>Get Started Free</span>
             <ArrowRight className="w-5 h-5" />

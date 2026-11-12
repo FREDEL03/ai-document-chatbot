@@ -65,3 +65,12 @@ body {
   .reveal { animation: fade-up linear both; animation-timeline: view(); animation-range: entry 0% entry 40%; }
 }
 @media (prefers-reduced-motion: reduce) { .reveal { animation: none; } }
+
+/* Landing page: ambient motion */
+@keyframes shimmer { to { background-position: 200% center; } }
+@keyframes float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+@keyframes drift { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(40px, 30px); } }
+.shimmer { animation: shimmer 6s linear infinite; }
+.blob { animation: drift 16s ease-in-out infinite; }
+.float { animation: fade-up .5s ease-out forwards, float 6s ease-in-out 1.5s infinite; }
+@media (prefers-reduced-motion: reduce) { .shimmer, .blob, .float { animation: none; } .float { opacity: 1; } }
