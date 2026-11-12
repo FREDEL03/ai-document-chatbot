@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { UploadedDoc, Conversation } from "./types";
 import { MAX_DOCS } from "./types";
-import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download } from "lucide-react";
+import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download, Search } from "lucide-react";
 
 type SidebarProps = {
   user: any;
@@ -29,6 +30,19 @@ type SidebarProps = {
 export function Sidebar({
   user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf,
 }: SidebarProps) {
+  const [historyQuery, setHistoryQuery] = useState("");
+
+  // Match on title or any message text; when only a message matches, show a snippet of it
+  const q = historyQuery.trim().toLowerCase();
+  const matches = conversations.flatMap((convo) => {
+    if (!q) return [{ convo, snippet: "" }];
+    if ((convo.title || "").toLowerCase().includes(q)) return [{ convo, snippet: "" }];
+    const hit = convo.messages.find((m) => m.text.toLowerCase().includes(q));
+    if (!hit) return [];
+    const i = hit.text.toLowerCase().indexOf(q);
+    return [{ convo, snippet: hit.text.slice(Math.max(0, i - 15), i + 45).replace(/\s+/g, " ") }];
+  });
+
   return (
       <aside
         className={`fixed sm:static inset-y-0 left-0 z-50 w-72 bg-[#F3F2F0] border-r border-[#E4E2DE] flex flex-col transition-transform duration-200 ease-in-out shrink-0 ${
@@ -178,13 +192,40 @@ export function Sidebar({
               </span>
             </div>
 
+            {conversations.length > 0 && (
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6B6B73]" />
+                <input
+                  type="text"
+                  value={historyQuery}
+                  onChange={(e) => setHistoryQuery(e.target.value)}
+                  placeholder="Search chats..."
+                  className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-white border border-[#E4E2DE] focus:border-[#5B6CFF] focus:outline-none text-xs text-[#2B2B2E] placeholder-[#6B6B73]"
+                />
+                {historyQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setHistoryQuery("")}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-[#6B6B73] hover:text-[#2B2B2E] cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {conversations.length === 0 ? (
               <div className="px-2 py-3 text-center text-[11px] text-[#6B6B73] bg-white/40 rounded-xl border border-dashed border-[#E4E2DE]">
                 No previous conversations
               </div>
+            ) : matches.length === 0 ? (
+              <div className="px-2 py-3 text-center text-[11px] text-[#6B6B73] bg-white/40 rounded-xl border border-dashed border-[#E4E2DE]">
+                No chats match &quot;{historyQuery}&quot;
+              </div>
             ) : (
               <div className="space-y-1">
-                {conversations.map((convo) => (
+                {matches.map(({ convo, snippet }) => (
                   <div
                     key={convo.id}
                     onClick={() => handleSelectConversation(convo)}
@@ -200,7 +241,10 @@ export function Sidebar({
                           currentConvoId === convo.id ? "text-[#5B6CFF]" : "text-[#6B6B73]"
                         }`}
                       />
-                      <span className="truncate">{convo.title || "Conversation"}</span>
+                      <div className="min-w-0">
+                        <span className="block truncate">{convo.title || "Conversation"}</span>
+                        {snippet && <span className="block truncate text-[10px] font-normal text-[#6B6B73]">{snippet}</span>}
+                      </div>
                     </div>
 
                     <button

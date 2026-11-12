@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import type { UploadedDoc } from "./types";
 import { FileViewer } from "@/app/components/FileViewer";
-import { FileText, Loader2, ExternalLink, X, AlertTriangle, Eye, Download } from "lucide-react";
+import { authFetch } from "@/src/lib/auth-fetch";
+import { FileText, Loader2, ExternalLink, X, AlertTriangle, Eye, Download, Search } from "lucide-react";
 
 type DocModalProps = {
   documents: UploadedDoc[];
@@ -15,11 +17,62 @@ type DocModalProps = {
   setDocModalTab: (v: "visual" | "text") => void;
   setShowDocModal: (v: boolean) => void;
   handleViewDocument: (doc?: UploadedDoc, page?: number | null) => void;
+  onGoToPage: (page: number | null) => void;
 };
 
+type SearchResult = { page: number | null; snippet: string };
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export function DocModal({
-  documents, currentDocument, docUrl, docPage, docText, docLoading, docModalTab, setDocModalTab, setShowDocModal, handleViewDocument,
+  documents, currentDocument, docUrl, docPage, docText, docLoading, docModalTab, setDocModalTab, setShowDocModal, handleViewDocument, onGoToPage,
 }: DocModalProps) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const docId = documents.find((d) => d.name === currentDocument)?.id;
+
+  // Switching to another document makes the old results meaningless
+  useEffect(() => {
+    setResults(null);
+    setSearchError("");
+  }, [docId]);
+
+  const runSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (!docId || q.length < 2) return;
+    setSearching(true);
+    setSearchError("");
+    try {
+      const res = await authFetch("/api/doc-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: docId, q }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Search failed");
+      setResults(data.results);
+    } catch (err: any) {
+      setResults(null);
+      setSearchError(err?.message || "Search failed");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const highlight = (text: string) =>
+    query.trim().length < 2 ? text : text.split(new RegExp(`(${escapeRe(query.trim())})`, "i")).map((part, i) =>
+      i % 2 === 1 ? (
+        <mark key={i} className="bg-yellow-200 text-inherit rounded px-0.5">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+
   return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-[#2B2B2E]/40 backdrop-blur-md animate-in fade-in duration-150">
           <div className="w-full max-w-5xl h-[92vh] bg-white border border-[#E4E2DE] rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col">
@@ -115,6 +168,69 @@ export function DocModal({
                 </button>
               </div>
             </div>
+
+            {/* Search inside this document */}
+            {docId && (
+              <div className="pt-3 shrink-0">
+                <form onSubmit={runSearch} className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#6B6B73]" />
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search in this document..."
+                      className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#FAFAF9] border border-[#E4E2DE] focus:border-[#5B6CFF] focus:outline-none text-xs text-[#2B2B2E] placeholder-[#6B6B73]"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={searching || query.trim().length < 2}
+                    className="px-3 py-1.5 rounded-xl bg-[#5B6CFF] hover:bg-[#4a5be8] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium cursor-pointer flex items-center gap-1.5"
+                  >
+                    {searching && <Loader2 className="w-3 h-3 animate-spin" />}
+                    Search
+                  </button>
+                </form>
+                {searchError && <p className="text-[11px] text-red-600 pt-1.5">{searchError}</p>}
+                {results && (
+                  <div className="mt-2 max-h-36 overflow-y-auto rounded-xl border border-[#E4E2DE] bg-white divide-y divide-[#E4E2DE]/70">
+                    {results.length === 0 ? (
+                      <p className="p-2.5 text-[11px] text-[#6B6B73]">No matches for &quot;{query.trim()}&quot;.</p>
+                    ) : (
+                      results.map((r, i) => {
+                        const body = (
+                          <>
+                            <span className="shrink-0 px-1.5 py-0.5 rounded bg-[#5B6CFF]/10 text-[#5B6CFF] text-[10px] font-semibold">
+                              {r.page ? `p.${r.page}` : "—"}
+                            </span>
+                            <span className="text-[11px] text-[#2B2B2E] leading-snug">{highlight(r.snippet)}</span>
+                          </>
+                        );
+                        return r.page ? (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              setDocModalTab("visual");
+                              onGoToPage(r.page);
+                            }}
+                            className="w-full flex items-start gap-2 p-2 text-left hover:bg-[#F3F2F0] cursor-pointer"
+                            title={`Go to page ${r.page}`}
+                          >
+                            {body}
+                          </button>
+                        ) : (
+                          <div key={i} className="flex items-start gap-2 p-2">
+                            {body}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex-1 my-3 overflow-hidden rounded-2xl bg-[#FAFAF9] border border-[#E4E2DE] flex flex-col">
               {docLoading ? (

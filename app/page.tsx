@@ -820,6 +820,7 @@ export default function Home() {
           setDocModalTab={setDocModalTab}
           setShowDocModal={setShowDocModal}
           handleViewDocument={handleViewDocument}
+          onGoToPage={setDocPage}
         />
       )}
     </div>
