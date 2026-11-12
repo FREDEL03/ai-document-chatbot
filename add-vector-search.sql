@@ -11,10 +11,10 @@ CREATE OR REPLACE FUNCTION match_chunks(
   doc_ids uuid[],
   match_count int DEFAULT 6
 )
-RETURNS TABLE (document_id uuid, chunk_index int, content text, similarity float)
+RETURNS TABLE (document_id uuid, chunk_index int, content text, metadata jsonb, similarity float)
 LANGUAGE sql STABLE
 AS $$
-  SELECT c.document_id, c.chunk_index, c.content,
+  SELECT c.document_id, c.chunk_index, c.content, c.metadata,
          1 - (c.embedding <=> query_embedding) AS similarity
   FROM document_chunks c
   WHERE c.document_id = ANY(doc_ids) AND c.embedding IS NOT NULL

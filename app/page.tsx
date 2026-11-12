@@ -38,6 +38,7 @@ type Message = {
   sender: "user" | "ai";
   timestamp?: string;
   cached?: boolean;
+  sources?: { d: string; p: number | null }[]; // document id + page the answer drew from
 };
 
 type UploadedDoc = {
@@ -183,6 +184,7 @@ export default function Home() {
   const [showDocModal, setShowDocModal] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
   const [docUrl, setDocUrl] = useState<string | null>(null);
+  const [docPage, setDocPage] = useState<number | null>(null); // PDF page to open at (from citations)
   const [docText, setDocText] = useState<string | null>(null);
   const [docModalTab, setDocModalTab] = useState<"visual" | "text">("visual");
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -345,17 +347,21 @@ export default function Home() {
         setLoading(false);
         setMessages((prev) => [
           ...prev,
-          { id: aiId, text: data.answer || "", sender: "ai", timestamp: timeString, cached: !!data.cached },
+          { id: aiId, text: data.answer || "", sender: "ai", timestamp: timeString, cached: !!data.cached, sources: data.sources },
         ]);
       } else {
         // Live answer: append text as it streams in
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let acc = "";
+        let sources: Message["sources"];
+        try {
+          sources = JSON.parse(decodeURIComponent(response.headers.get("X-Sources") || "[]"));
+        } catch {}
         setLoading(false);
         setMessages((prev) => [
           ...prev,
-          { id: aiId, text: "", sender: "ai", timestamp: timeString, cached: false },
+          { id: aiId, text: "", sender: "ai", timestamp: timeString, cached: false, sources },
         ]);
         for (;;) {
           const { done, value } = await reader.read();
@@ -633,7 +639,8 @@ export default function Home() {
     }
   };
 
-  const handleViewDocument = async (docToView?: UploadedDoc) => {
+  const handleViewDocument = async (docToView?: UploadedDoc, page?: number | null) => {
+    setDocPage(page ?? null);
     const targetName = docToView ? docToView.name : currentDocument;
     const targetId = docToView ? docToView.id : currentDocumentId;
     if (!targetName && !targetId) return;
@@ -1110,6 +1117,29 @@ export default function Home() {
                         </ReactMarkdown>
                       </div>
 
+                      {/* Source citations: click to open the document at that page */}
+                      {msg.sources && msg.sources.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <span className="text-[10px] font-medium text-[#6B6B73]">Sources:</span>
+                          {msg.sources.map((s, i) => {
+                            const doc = documents.find((d) => d.id === s.d);
+                            if (!doc) return null;
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => handleViewDocument(doc, s.p)}
+                                className="inline-flex items-center gap-1 max-w-[220px] px-2 py-0.5 rounded-md border border-[#E4E2DE] bg-[#FAFAF9] hover:bg-[#F3F2F0] text-[11px] text-[#5B6CFF] cursor-pointer"
+                                title={s.p ? `${doc.name} — page ${s.p}` : doc.name}
+                              >
+                                <FileText className="w-3 h-3 shrink-0" />
+                                <span className="truncate">{doc.name}{s.p ? ` · p.${s.p}` : ""}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
                       {msg.timestamp && (
                         <div className="text-[10px] text-right font-medium text-[#6B6B73] pt-1 border-t border-[#E4E2DE]/40">
                           {msg.timestamp}
@@ -1485,12 +1515,13 @@ export default function Home() {
                 currentDocument?.toLowerCase().endsWith(".pdf") ? (
                   docUrl ? (
                     <object
-                      data={`${docUrl}#toolbar=1&navpanes=0`}
+                      key={`${docUrl}#${docPage}`}
+                      data={`${docUrl}#${docPage ? `page=${docPage}&` : ""}toolbar=1&navpanes=0`}
                       type="application/pdf"
                       className="w-full h-full rounded-2xl"
                     >
                       <iframe
-                        src={`${docUrl}#toolbar=1`}
+                        src={`${docUrl}#${docPage ? `page=${docPage}&` : ""}toolbar=1`}
                         className="w-full h-full rounded-2xl border-0"
                         title="PDF Visual Preview"
                       />

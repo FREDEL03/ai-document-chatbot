@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
     let extractedText = "";
     let chunks: string[] = [];
     let imageReadFailed = false;
+    let pdfPages: { num: number; text: string }[] | null = null; // per-page text, for page citations
+    let pdfImageText = "";
 
     // Extract text based on file type
     if (file.type === "application/pdf") {
@@ -142,11 +144,15 @@ export async function POST(request: NextRequest) {
         const parser = new PDFParse({ data: new Uint8Array(buffer) });
         const result = await parser.getText();
         extractedText = result.text.replace(/\s+/g, " ").trim();
+        pdfPages = result.pages.map((p) => ({ num: p.num, text: p.text.replace(/\s+/g, " ").trim() }));
         await parser.destroy();
         // Also read text/figures inside images (OCR via Gemini vision)
         const imageText = await readImages(buffer, file.type);
         if (imageText === null) imageReadFailed = true;
-        else if (imageText) extractedText += ` [Image content: ${imageText.replace(/\s+/g, " ")}]`;
+        else if (imageText) {
+          pdfImageText = `[Image content: ${imageText.replace(/\s+/g, " ")}]`;
+          extractedText += ` ${pdfImageText}`;
+        }
       } catch (pdfError: any) {
         console.error("PDF extraction error:", pdfError);
         return NextResponse.json(
@@ -173,7 +179,14 @@ export async function POST(request: NextRequest) {
 
     // If text extracted, chunk and save chunks
     if (extractedText) {
-      chunks = chunkText(extractedText, 1000, 200);
+      // PDFs are chunked per page so each chunk knows its page number
+      const items: { content: string; page?: number }[] = pdfPages
+        ? [
+            ...pdfPages.flatMap((p) => chunkText(p.text, 1000, 200).map((content) => ({ content, page: p.num }))),
+            ...chunkText(pdfImageText, 1000, 200).map((content) => ({ content })),
+          ]
+        : chunkText(extractedText, 1000, 200).map((content) => ({ content }));
+      chunks = items.map((i) => i.content);
 
       // Insert chunks into document_chunks table
       if (chunks.length > 0) {
@@ -184,7 +197,7 @@ export async function POST(request: NextRequest) {
           chunk_index: index,
           content,
           embedding: vectors ? JSON.stringify(vectors[index]) : null,
-          metadata: { source: file.name },
+          metadata: { source: file.name, ...(items[index].page ? { page: items[index].page } : {}) },
         }));
 
         const { error: chunksError } = await supabaseAdmin

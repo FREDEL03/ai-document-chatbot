@@ -5,8 +5,12 @@ import { embedTexts } from "@/src/lib/embed";
 
 export const maxDuration = 30;
 
+// Where an answer came from: document id + page (null when the file has no pages)
+type Source = { d: string; p: number | null };
+
 interface CacheEntry {
   answer: string;
+  sources: Source[];
   createdAt: number;
   expiresAt: number;
 }
@@ -132,11 +136,12 @@ export async function POST(request: NextRequest) {
 
     const cached = qaCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
-      return NextResponse.json({ answer: cached.answer, cached: true });
+      return NextResponse.json({ answer: cached.answer, sources: cached.sources, cached: true });
     }
 
     // Retrieve document content from Supabase for all selected documents
     let docContext = "";
+    const sources: Source[] = [];
     if (docItems.length > 0) {
       const queryVec = (await embedTexts([trimmed], "RETRIEVAL_QUERY"))?.[0] ?? null;
       const topK = Math.max(4, Math.floor(12 / Math.min(docItems.length, 5)));
@@ -182,6 +187,15 @@ export async function POST(request: NextRequest) {
                 match_count: topK,
               });
               if (matches?.length) {
+                // matches arrive best-first: keep the top 3 unique pages as citations
+                const seen = new Set<number | null>();
+                for (const m of matches) {
+                  const p: number | null = m.metadata?.page ?? null;
+                  if (seen.size < 3 && !seen.has(p)) {
+                    seen.add(p);
+                    sources.push({ d: targetId, p });
+                  }
+                }
                 chunks = [...matches].sort((a: any, b: any) => a.chunk_index - b.chunk_index);
               }
             }
@@ -310,6 +324,7 @@ User: ${trimmed}`;
           }
           qaCache.set(cacheKey, {
             answer: answer.trim(),
+            sources,
             createdAt: Date.now(),
             expiresAt: Date.now() + CACHE_TTL_MS,
           });
@@ -321,7 +336,11 @@ User: ${trimmed}`;
     });
 
     return new Response(responseStream, {
-      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache, no-transform" },
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Sources": encodeURIComponent(JSON.stringify(sources.slice(0, 6))),
+      },
     });
   } catch (error: any) {
     console.error("Chat API error:", error);
