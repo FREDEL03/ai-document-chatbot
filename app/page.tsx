@@ -302,6 +302,7 @@ export default function Home() {
 
     setUploading(true);
     let successCount = 0;
+    const toSummarize: { id: string; name: string }[] = [];
 
     for (const file of filesToUpload) {
       if (file.size > 4.5 * 1024 * 1024) {
@@ -353,6 +354,7 @@ export default function Home() {
           toast.success(`"${file.name}" ready for chat!`, { id: toastId });
         }
         successCount++;
+        if (data.documentId && data.extracted) toSummarize.push({ id: data.documentId, name: file.name });
       } catch (err: any) {
         toast.error(`Failed to upload "${file.name}": ${err?.message || "Error"}`, { id: toastId });
       }
@@ -372,6 +374,34 @@ export default function Home() {
 
     setUploading(false);
     setSidebarOpen(false);
+
+    // Summaries arrive later and are optional: don't block the upload on them
+    toSummarize.forEach((d) => summarizeDocument(d.id, d.name));
+  };
+
+  // Ask the server for a short summary + 3 suggested questions, then post it in the chat
+  const summarizeDocument = async (docId: string, docName: string) => {
+    try {
+      const res = await authFetch("/api/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: docId }),
+      });
+      if (!res.ok) return;
+      const { summary, questions } = await res.json();
+      setDocuments((prev) => prev.map((d) => (d.id === docId ? { ...d, questions } : d)));
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          text: `### Summary: ${docName}\n\n${summary}`,
+          sender: "ai",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } catch (err) {
+      console.warn("Summary failed:", err);
+    }
   };
 
   const onDrop = useCallback(

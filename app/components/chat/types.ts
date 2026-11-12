@@ -12,6 +12,7 @@ export type UploadedDoc = {
   name: string;
   url?: string | null;
   size?: number;
+  questions?: string[]; // AI-suggested questions, shown as chips
 };
 
 export type Conversation = {

@@ -20,15 +20,19 @@ type ComposerProps = {
 export function Composer({
   messages, documents, generating, onStop, uploading, message, setMessage, currentDocument, openFileDialog, handleSend,
 }: ComposerProps) {
-  const quickPrompts = [
-    "Summarize this document briefly",
-    "What are the main key points?",
-    "Extract important action items or dates",
-  ];
+  // Prefer questions generated from the documents; fall back to generic ones
+  const suggested = documents.flatMap((d) => d.questions ?? []).slice(0, 3);
+  const quickPrompts = suggested.length
+    ? suggested
+    : [
+        "Summarize this document briefly",
+        "What are the main key points?",
+        "Extract important action items or dates",
+      ];
 
   return (
 <>
-        {documents.length > 0 && messages.length <= 3 && !generating && (
+        {documents.length > 0 && !messages.some((m) => m.sender === "user") && !generating && (
           <div className="px-4 sm:px-6 max-w-3xl mx-auto w-full pb-2">
             <div className="flex flex-wrap items-center gap-2 pb-1">
               <span className="text-xs text-[#6B6B73] shrink-0">Try asking:</span>
