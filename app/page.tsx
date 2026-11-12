@@ -16,6 +16,7 @@ import { Composer } from "@/app/components/chat/Composer";
 import { ConfirmDialogs } from "@/app/components/chat/ConfirmDialogs";
 import { DocModal } from "@/app/components/chat/DocModal";
 import { LibraryModal } from "@/app/components/chat/LibraryModal";
+import { ShareModal } from "@/app/components/chat/ShareModal";
 import { MAX_DOCS } from "@/app/components/chat/types";
 import type { Message, UploadedDoc, Conversation, Lang } from "@/app/components/chat/types";
 import { LanguageSelect } from "@/app/components/LanguageSelect";
@@ -71,6 +72,7 @@ export default function Home() {
 
   const [showDocModal, setShowDocModal] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
   const [docUrl, setDocUrl] = useState<string | null>(null);
   const [docPage, setDocPage] = useState<number | null>(null); // PDF page to open at (from citations)
@@ -775,6 +777,7 @@ export default function Home() {
         onExportPdf={() => exportPdf(documents)}
         onAddUrl={addUrl}
         onOpenLibrary={() => setShowLibrary(true)}
+        onShare={() => setShowShare(true)}
       />
 
 
@@ -871,6 +874,8 @@ export default function Home() {
         setConvoToDelete={setConvoToDelete}
         confirmDeleteConversation={confirmDeleteConversation}
       />
+
+      {showShare && <ShareModal messages={messages} documents={documents} onClose={() => setShowShare(false)} />}
 
       {showLibrary && (
         <LibraryModal documents={documents} maxDocs={MAX_DOCS} onAdd={addFromLibrary} onClose={() => setShowLibrary(false)} />

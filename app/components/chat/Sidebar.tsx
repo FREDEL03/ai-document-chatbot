@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { UploadedDoc, Conversation } from "./types";
 import { MAX_DOCS } from "./types";
-import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download, Search, Link2, Library } from "lucide-react";
+import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download, Search, Link2, Library, Share2 } from "lucide-react";
 
 type SidebarProps = {
   user: any;
@@ -27,10 +27,11 @@ type SidebarProps = {
   onExportPdf: () => void;
   onAddUrl: (url: string) => Promise<boolean>;
   onOpenLibrary: () => void;
+  onShare: () => void;
 };
 
 export function Sidebar({
-  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf, onAddUrl, onOpenLibrary,
+  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf, onAddUrl, onOpenLibrary, onShare,
 }: SidebarProps) {
   const [historyQuery, setHistoryQuery] = useState("");
   const [urlInput, setUrlInput] = useState("");
@@ -329,6 +330,16 @@ export function Sidebar({
               PDF
             </button>
           </div>
+
+          <button
+            onClick={onShare}
+            disabled={!canExport}
+            title="Create a read-only link to this chat"
+            className="w-full py-2 px-3 rounded-lg text-xs font-medium text-[#5B6CFF] hover:bg-card transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            Share chat link
+          </button>
 
           <button
             onClick={() => setShowClearConfirm(true)}
