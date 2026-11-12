@@ -15,6 +15,7 @@ import { MessageList } from "@/app/components/chat/MessageList";
 import { Composer } from "@/app/components/chat/Composer";
 import { ConfirmDialogs } from "@/app/components/chat/ConfirmDialogs";
 import { DocModal } from "@/app/components/chat/DocModal";
+import { LibraryModal } from "@/app/components/chat/LibraryModal";
 import { MAX_DOCS } from "@/app/components/chat/types";
 import type { Message, UploadedDoc, Conversation, Lang } from "@/app/components/chat/types";
 import { LanguageSelect } from "@/app/components/LanguageSelect";
@@ -69,6 +70,7 @@ export default function Home() {
   const [signingOut, setSigningOut] = useState(false);
 
   const [showDocModal, setShowDocModal] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const [docLoading, setDocLoading] = useState(false);
   const [docUrl, setDocUrl] = useState<string | null>(null);
   const [docPage, setDocPage] = useState<number | null>(null); // PDF page to open at (from citations)
@@ -557,6 +559,20 @@ export default function Home() {
     toast.info(`Removed "${docName}"`);
   };
 
+  // Re-use a document that was uploaded earlier: no re-upload, the viewer fetches its link on demand
+  const addFromLibrary = (doc: UploadedDoc) => {
+    if (documents.length >= MAX_DOCS) {
+      toast.error(`Maximum of ${MAX_DOCS} documents reached. Please clear a file first.`);
+      return;
+    }
+    if (documents.some((d) => d.id === doc.id)) return;
+    setDocuments((prev) => [...prev, doc]);
+    setCurrentDocument(doc.name);
+    setCurrentDocumentId(doc.id);
+    setDocUrl(null);
+    toast.success(`"${doc.name}" added to this chat`);
+  };
+
   const handleClearAllDocuments = () => {
     setShowClearFilesConfirm(true);
   };
@@ -758,6 +774,7 @@ export default function Home() {
         onExportMarkdown={() => exportMarkdown(messages, documents)}
         onExportPdf={() => exportPdf(documents)}
         onAddUrl={addUrl}
+        onOpenLibrary={() => setShowLibrary(true)}
       />
 
 
@@ -854,6 +871,10 @@ export default function Home() {
         setConvoToDelete={setConvoToDelete}
         confirmDeleteConversation={confirmDeleteConversation}
       />
+
+      {showLibrary && (
+        <LibraryModal documents={documents} maxDocs={MAX_DOCS} onAdd={addFromLibrary} onClose={() => setShowLibrary(false)} />
+      )}
 
       {showDocModal && (
         <DocModal

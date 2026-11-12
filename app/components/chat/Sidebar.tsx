@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { UploadedDoc, Conversation } from "./types";
 import { MAX_DOCS } from "./types";
-import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download, Search, Link2 } from "lucide-react";
+import { FileText, Upload, Loader2, LogOut, X, Sparkles, RotateCcw, Eye, Plus, Trash2, MessageSquare, Download, Search, Link2, Library } from "lucide-react";
 
 type SidebarProps = {
   user: any;
@@ -26,10 +26,11 @@ type SidebarProps = {
   onExportMarkdown: () => void;
   onExportPdf: () => void;
   onAddUrl: (url: string) => Promise<boolean>;
+  onOpenLibrary: () => void;
 };
 
 export function Sidebar({
-  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf, onAddUrl,
+  user, sidebarOpen, setSidebarOpen, handleNewChat, openFileDialog, uploading, documents, handleViewDocument, handleRemoveDocument, handleClearAllDocuments, conversations, currentConvoId, handleSelectConversation, handleDeleteConversation, setShowClearConfirm, setShowSignOutConfirm, canExport, onExportMarkdown, onExportPdf, onAddUrl, onOpenLibrary,
 }: SidebarProps) {
   const [historyQuery, setHistoryQuery] = useState("");
   const [urlInput, setUrlInput] = useState("");
@@ -118,6 +119,14 @@ export function Sidebar({
           <p className="text-[10px] text-muted text-center">
             PDF, Word, Excel, PPT, CSV, TXT • max {MAX_DOCS} files (4.5MB ea)
           </p>
+
+          <button
+            onClick={onOpenLibrary}
+            className="w-full py-2 px-3 rounded-xl bg-card hover:bg-background text-foreground border border-border hover:border-[#5B6CFF]/40 font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Library className="w-3.5 h-3.5 text-[#5B6CFF]" />
+            Document Library
+          </button>
 
           {/* Import a webpage as a document */}
           <form onSubmit={submitUrl} className="flex items-center gap-1.5 pt-1">
