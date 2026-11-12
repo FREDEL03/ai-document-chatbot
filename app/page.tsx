@@ -125,8 +125,10 @@ const markdownComponents = {
   td: ({ children }: any) => (
     <td className="px-3.5 py-2.5 text-[#2B2B2E] leading-normal">{children}</td>
   ),
-  code: ({ inline, className, children, ...props }: any) => {
-    if (inline) {
+  code: ({ className, children, ...props }: any) => {
+    // react-markdown v9+ has no `inline` prop: block code has a language class or a newline
+    const isBlock = /language-/.test(className || "") || String(children).includes("\n");
+    if (!isBlock) {
       return (
         <code className="bg-[#F3F2F0] text-[#5B6CFF] font-mono text-[12px] px-1.5 py-0.5 rounded-md border border-[#E4E2DE]/80 font-medium" {...props}>
           {children}
