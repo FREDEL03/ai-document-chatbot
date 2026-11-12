@@ -29,13 +29,13 @@ export function Composer({
 <>
         {documents.length > 0 && messages.length <= 3 && !loading && (
           <div className="px-4 sm:px-6 max-w-3xl mx-auto w-full pb-2">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex flex-wrap items-center gap-2 pb-1">
               <span className="text-xs text-[#6B6B73] shrink-0">Try asking:</span>
               {quickPrompts.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleSend(undefined, prompt)}
-                  className="text-xs bg-white hover:bg-[#F3F2F0] border border-[#E4E2DE] hover:border-[#5B6CFF]/40 text-[#2B2B2E] py-1.5 px-3 rounded-full whitespace-nowrap transition-colors cursor-pointer shadow-xs"
+                  className="text-xs bg-white hover:bg-[#F3F2F0] border border-[#E4E2DE] hover:border-[#5B6CFF]/40 text-[#2B2B2E] py-1.5 px-3 rounded-full text-left transition-colors cursor-pointer shadow-xs"
                 >
                   {prompt} →
                 </button>
