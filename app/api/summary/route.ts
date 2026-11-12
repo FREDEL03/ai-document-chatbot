@@ -5,7 +5,12 @@ import { guard } from "@/src/lib/api-guard";
 
 export const maxDuration = 30;
 
-const PROMPT = (name: string, text: string) => `You are summarizing an uploaded document named "${name}".
+const LANGUAGE_RULE: Record<string, string> = {
+  en: "Write in English.",
+  fil: "Write in Filipino (Tagalog), keeping technical terms and proper names as they are.",
+};
+
+const PROMPT = (name: string, text: string, language: unknown) => `You are summarizing an uploaded document named "${name}".
 
 Return ONLY JSON of this exact shape:
 {"summary": "<markdown>", "questions": ["<q1>", "<q2>", "<q3>"]}
@@ -13,7 +18,7 @@ Return ONLY JSON of this exact shape:
 Rules:
 - "summary": 3-5 short markdown bullet points (- ) covering what the document is and its key points. Bold key terms. No heading.
 - "questions": exactly 3 specific questions a reader could ask about THIS document, each under 80 characters.
-- Write in the same language as the document (English, Filipino or Taglish).
+- ${typeof language === "string" && Object.hasOwn(LANGUAGE_RULE, language) ? LANGUAGE_RULE[language] : "Write in the same language as the document (English, Filipino or Taglish)."}
 
 DOCUMENT TEXT:
 ${text}`;
@@ -23,7 +28,7 @@ export async function POST(request: NextRequest) {
     const auth = await guard(request, "summary", 10);
     if (auth instanceof NextResponse) return auth;
 
-    const { documentId } = await request.json().catch(() => ({}));
+    const { documentId, language } = await request.json().catch(() => ({}));
     if (typeof documentId !== "string" || !documentId) {
       return NextResponse.json({ error: "Missing documentId" }, { status: 400 });
     }
@@ -49,7 +54,7 @@ export async function POST(request: NextRequest) {
       try {
         const res = await ai.models.generateContent({
           model,
-          contents: PROMPT(doc.original_name, doc.extracted_text),
+          contents: PROMPT(doc.original_name, doc.extracted_text, language),
           config: { responseMimeType: "application/json" },
         });
         const raw = (res.text ?? "").replace(/^```(?:json)?|```$/gm, "").trim();

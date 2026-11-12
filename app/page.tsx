@@ -16,7 +16,8 @@ import { Composer } from "@/app/components/chat/Composer";
 import { ConfirmDialogs } from "@/app/components/chat/ConfirmDialogs";
 import { DocModal } from "@/app/components/chat/DocModal";
 import { MAX_DOCS } from "@/app/components/chat/types";
-import type { Message, UploadedDoc, Conversation } from "@/app/components/chat/types";
+import type { Message, UploadedDoc, Conversation, Lang } from "@/app/components/chat/types";
+import { LanguageSelect } from "@/app/components/LanguageSelect";
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
@@ -35,6 +36,22 @@ export default function Home() {
   ]);
   const [loading, setLoading] = useState(false); // waiting for the first chunk (typing dots)
   const [generating, setGenerating] = useState(false); // request in flight, including while text streams
+  const [lang, setLang] = useState<Lang>("auto");
+
+  // Restore the saved language after mount (reading localStorage during render would break hydration)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("docuchat_lang");
+      if (saved === "en" || saved === "fil") setLang(saved);
+    } catch {}
+  }, []);
+
+  const changeLang = (v: Lang) => {
+    setLang(v);
+    try {
+      localStorage.setItem("docuchat_lang", v);
+    } catch {}
+  };
   const abortRef = useRef<AbortController | null>(null);
   const [uploading, setUploading] = useState(false);
   const [documents, setDocuments] = useState<UploadedDoc[]>([]);
@@ -218,6 +235,7 @@ export default function Home() {
         signal: controller.signal,
         body: JSON.stringify({
           regenerate: !!opts?.regenerate,
+          language: lang,
           message: textToSend,
           document: currentDocument,
           documentId: currentDocumentId,
@@ -407,7 +425,7 @@ export default function Home() {
       const res = await authFetch("/api/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentId: docId }),
+        body: JSON.stringify({ documentId: docId, language: lang }),
       });
       if (!res.ok) return;
       const { summary, questions } = await res.json();
@@ -785,6 +803,7 @@ export default function Home() {
                   : "General Chat Mode"}
               </span>
             </div>
+            <LanguageSelect value={lang} onChange={changeLang} />
             <ThemeToggle />
           </div>
         </header>
@@ -806,6 +825,7 @@ export default function Home() {
           documents={documents}
           generating={generating}
           onStop={handleStop}
+          language={lang}
           uploading={uploading}
           message={message}
           setMessage={setMessage}

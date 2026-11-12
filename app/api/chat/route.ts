@@ -21,11 +21,17 @@ const qaCache = new Map<string, CacheEntry>();
 const MAX_CACHE_SIZE = 1000;
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-function buildCacheKey(question: string, docIdentifiers: string[], userId?: string | null): string {
+function buildCacheKey(question: string, docIdentifiers: string[], userId: string | null, language: string): string {
   const normQ = question.toLowerCase().trim().replace(/\s+/g, " ");
   const sortedDocs = [...docIdentifiers].sort().join("|");
-  return `${userId || "global"}::${sortedDocs}::${normQ}`;
+  return `${userId || "global"}::${language}::${sortedDocs}::${normQ}`;
 }
+
+// Answer-language setting from the UI: "auto" (follow the user's language), "en" or "fil"
+const LANGUAGE_RULE: Record<string, string> = {
+  en: "\n\nIMPORTANT: Always write your reply in English, even if the question or the document is in another language.",
+  fil: "\n\nIMPORTANT: Always write your reply in Filipino (Tagalog), even if the question or the document is in another language. Keep technical terms and proper names as they are.",
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +51,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { message, document: documentName, documentId, documentIds, documents: docsPayload, regenerate } = body;
+    const language: string =
+      typeof body.language === "string" && Object.hasOwn(LANGUAGE_RULE, body.language) ? body.language : "auto";
     if (typeof message !== "string") {
       return NextResponse.json(
         { error: "Field 'message' must be a string" },
@@ -137,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     // Check in-memory Q&A cache before document retrieval or AI generation
     const docIdentifiers = docItems.map((d) => d.id || d.name || "").filter(Boolean);
-    const cacheKey = buildCacheKey(trimmed, docIdentifiers, userId);
+    const cacheKey = buildCacheKey(trimmed, docIdentifiers, userId, language);
 
     const cached = qaCache.get(cacheKey);
     // "Regenerate" skips the cache so the user gets a fresh answer (which then replaces the cached one)
@@ -276,6 +284,8 @@ Formatting guidelines:
 
 User: ${trimmed}`;
     }
+
+    prompt += LANGUAGE_RULE[language] ?? "";
 
     // Call Gemini with fallback model support
     const ai = new GoogleGenAI({ apiKey });

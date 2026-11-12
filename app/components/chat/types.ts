@@ -23,4 +23,6 @@ export type Conversation = {
   documents: UploadedDoc[];
 };
 
+export type Lang = "auto" | "en" | "fil"; // language the AI answers in (also used for voice input)
+
 export const MAX_DOCS = 5;
