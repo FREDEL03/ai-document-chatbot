@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { chunkText } from "@/src/lib/chunk-text";
 import { readImages } from "@/src/lib/read-images";
 import { embedTexts } from "@/src/lib/embed";
+import { guard } from "@/src/lib/api-guard";
 
 export const maxDuration = 60;
 
@@ -20,10 +21,13 @@ const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB limit for Vercel Serverless
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await guard(request, "upload", 10);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
+
     const supabaseAdmin = getSupabaseAdmin();
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const userId = (formData.get("userId") as string | null)?.trim() || null;
 
     if (!file) {
       return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
 import { embedTexts } from "@/src/lib/embed";
+import { guard } from "@/src/lib/api-guard";
 
 export const maxDuration = 30;
 
@@ -28,6 +29,10 @@ function buildCacheKey(question: string, docIdentifiers: string[], userId?: stri
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await guard(request, "chat", 20);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
+
     // Parse request body first
     let body;
     try {
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, document: documentName, documentId, documentIds, documents: docsPayload, userId } = body;
+    const { message, document: documentName, documentId, documentIds, documents: docsPayload } = body;
     if (typeof message !== "string") {
       return NextResponse.json(
         { error: "Field 'message' must be a string" },
@@ -158,7 +163,7 @@ export async function POST(request: NextRequest) {
               .from("documents")
               .select("id, original_name")
               .eq("original_name", item.name);
-            if (userId) query = query.eq("user_id", userId);
+            query = query.eq("user_id", userId);
             const { data: found } = await query
               .order("created_at", { ascending: false })
               .limit(1)
@@ -168,14 +173,15 @@ export async function POST(request: NextRequest) {
           }
 
           if (targetId) {
-            if (!item.name) {
-              const { data: meta } = await supabaseAdmin
-                .from("documents")
-                .select("original_name")
-                .eq("id", targetId)
-                .maybeSingle();
-              if (meta?.original_name) docTitle = meta.original_name;
-            }
+            // Ownership check: the service role bypasses RLS, so enforce it here
+            const { data: meta } = await supabaseAdmin
+              .from("documents")
+              .select("original_name")
+              .eq("id", targetId)
+              .eq("user_id", userId)
+              .maybeSingle();
+            if (!meta) continue;
+            if (!item.name && meta.original_name) docTitle = meta.original_name;
 
             // Semantic retrieval: only the chunks closest to the question.
             // Falls back to the first 20 chunks when embeddings/RPC are unavailable.

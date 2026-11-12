@@ -5,6 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { FileText, Upload, Loader2, ExternalLink, Menu } from "lucide-react";
 import { getSupabaseClient } from "@/src/lib/supabase-client";
+import { authFetch } from "@/src/lib/auth-fetch";
 import { LandingPage } from "@/app/components/LandingPage";
 import { AuthModal } from "@/app/components/AuthModal";
 import { Sidebar } from "@/app/components/chat/Sidebar";
@@ -180,7 +181,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await authFetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -189,7 +190,6 @@ export default function Home() {
           documentId: currentDocumentId,
           documentIds: documents.map((d) => d.id),
           documents: documents.map((d) => ({ id: d.id, name: d.name })),
-          userId: user?.id,
         }),
       });
 
@@ -279,11 +279,10 @@ export default function Home() {
       try {
         const formData = new FormData();
         formData.append("file", file);
-        if (user?.id) formData.append("userId", user.id);
 
         const localBlob = URL.createObjectURL(file);
 
-        const response = await fetch("/api/upload", {
+        const response = await authFetch("/api/upload", {
           method: "POST",
           body: formData,
         });
@@ -526,9 +525,8 @@ export default function Home() {
       const params = new URLSearchParams();
       if (targetId) params.set("id", targetId);
       if (targetName) params.set("name", targetName);
-      if (user?.id) params.set("userId", user.id);
 
-      const res = await fetch(`/api/document?${params.toString()}`);
+      const res = await authFetch(`/api/document?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if (data.signedUrl) {

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/src/lib/supabase-admin";
+import { guard } from "@/src/lib/api-guard";
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await guard(request, "document", 60);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const name = searchParams.get("name");
-    const userId = searchParams.get("userId");
 
     if (!id && !name) {
       return NextResponse.json(
@@ -18,15 +22,13 @@ export async function GET(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdmin();
     let query = supabaseAdmin
       .from("documents")
-      .select("id, original_name, storage_path, extracted_text, mime_type, file_size");
+      .select("id, original_name, storage_path, extracted_text, mime_type, file_size")
+      .eq("user_id", userId); // service role bypasses RLS: only ever return the caller's own files
 
     if (id) {
       query = query.eq("id", id);
     } else if (name) {
       query = query.eq("original_name", name);
-      if (userId) {
-        query = query.eq("user_id", userId);
-      }
     }
 
     const { data, error } = await query
