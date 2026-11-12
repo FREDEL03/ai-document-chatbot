@@ -52,3 +52,10 @@ body {
   height: 100vh;
   overflow: hidden;
 }
+
+/* Landing page demo: staged reveal, runs once */
+@keyframes fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes dots { 0%, 100% { opacity: 0; } 10%, 90% { opacity: 1; } }
+.fade-up { opacity: 0; animation: fade-up .5s ease-out forwards; }
+.demo-dots { opacity: 0; animation: dots 1.1s ease-in-out forwards; }
+@media (prefers-reduced-motion: reduce) { .fade-up { opacity: 1; animation: none; } .demo-dots { display: none; } }
